@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudio de Daniel CRR Youth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Pacifico&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Harmony (Beige, Brown, Orange) -->
+    <!-- Application Structure Plan: The application uses a dashboard-centric structure. The main view presents the 12 chapters as interactive cards, showing progress. Clicking a chapter transitions to a tabbed view (Lectura, Observación, Cuestionario, Recursos) for focused study. This structure was chosen to prevent cognitive overload by compartmentalizing different learning activities (reading, Q&A, quizzes, videos) while providing a clear overview and sense of progression on the main dashboard. A new "Cuestionario General" section has been added to the dashboard for broader questions. Navigation is handled by JavaScript, dynamically rendering content into a single container, creating a seamless single-page application experience. User progress is saved to localStorage, ensuring a persistent state across sessions on the same device. -->
+    <!-- Visualization & Content Choices: Content is organized into JS objects for modularity. Goal: Inform -> Method: Cleanly formatted text (RVR60) with integrated fill-in-the-blanks (HTML inputs) for active recall. Interaction: User fills blank, gets immediate feedback. Goal: Compare/Analyze -> Method: Observation Q&A with hidden answers. Interaction: User types response, clicks to reveal correct answer, promoting critical thought. Goal: Assess -> Method: Multiple-choice quizzes for chapters, and a Q&A list for general knowledge. Interaction: User selects answers/types response, gets a score and feedback. Justification: This multi-faceted approach caters to different learning styles and deepens engagement beyond passive reading. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            background-color: #FDF6E3; /* Warm Beige */
+            font-family: 'Inter', sans-serif;
+            color: #6B4F4B; /* Muted Brown */
+        }
+        .font-cursive {
+            font-family: 'Pacifico', cursive;
+        }
+        .font-serif {
+            font-family: 'Lora', serif;
+        }
+        .main-title {
+            color: #D97706; /* Warm Orange */
+        }
+        .btn-primary {
+            background-color: #D97706;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #B45309;
+        }
+        .btn-secondary {
+            background-color: #E5E7EB;
+            color: #374151;
+            transition: background-color 0.3s;
+        }
+        .btn-secondary:hover {
+            background-color: #D1D5DB;
+        }
+        .tab-active {
+            border-bottom: 2px solid #D97706;
+            color: #D97706;
+            font-weight: 600;
+        }
+        .progress-bar-bg {
+            background-color: #E5E7EB;
+        }
+        .progress-bar-fill {
+            background-color: #F59E0B; /* Lighter Orange for progress */
+            transition: width 0.5s ease-in-out;
+        }
+        .card {
+            background-color: #FEFBF3;
+            border: 1px solid #F3EADF;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .fill-in-blank {
+            border: none;
+            border-bottom: 1px dashed #D97706;
+            background-color: transparent;
+            padding: 2px 4px;
+            margin: 0 4px;
+            width: 120px;
+            text-align: center;
+        }
+        .fill-in-blank:focus {
+            outline: none;
+            border-bottom: 1px solid #B45309;
+        }
+        .correct {
+            border-bottom: 1px solid #10B981;
+        }
+        .incorrect {
+            border-bottom: 1px solid #EF4444;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="app" class="container mx-auto p-4 md:p-8">
+        <!-- App content will be rendered here -->
+    </div>
+
+    <script>
+        const AppData = {
+            bibleText: {
+                1: `
+                    <p class="mb-2"><strong>1</strong> En el año tercero del reinado de Joacim rey de Judá, vino Nabucodonosor rey de Babilonia a Jerusalén, y la sitió.</p>
+                    <p class="mb-2"><strong>2</strong> Y el Señor entregó en sus manos a Joacim rey de Judá, y parte de los utensilios de la casa de Dios; y los trajo a tierra de Sinar, a la casa de su dios, y colocó los utensilios en la casa del tesoro de su dios.</p>
+                    <p class="mb-2"><strong>3</strong> Y dijo el rey a Aspenaz, jefe de sus eunucos, que trajese de los hijos de Israel, del linaje real de los príncipes,</p>
+                    <p class="mb-2"><strong>4</strong> muchachos en quienes no hubiese tacha alguna, de buen parecer, enseñados en toda sabiduría, sabios en ciencia y de buen entendimiento, e idóneos para estar en el palacio del rey; y que les enseñase las letras y la lengua de los caldeos.</p>
+                    <p class="mb-2"><strong>5</strong> Y les señaló el rey ración para cada día, de la provisión de la comida del rey, y del vino que él bebía; y que los criase tres años, para que al fin de ellos se presentasen delante del rey.</p>
+                    <p class="mb-2"><strong>6</strong> Entre éstos estaban Daniel, Ananías, Misael y Azarías, de los hijos de Judá.</p>
+                    <p class="mb-2"><strong>7</strong> A éstos el jefe de los eunucos puso nombres: puso a Daniel, Beltsasar; a Ananías, Sadrac; a Misael, Mesac; y a Azarías, Abed-nego.</p>
+                    <p class="mb-2"><strong>8</strong> Y Daniel propuso en su corazón no contaminarse con la porción de la comida del rey, ni con el vino que él bebía; pidió, por tanto, al jefe de los eunucos que no se le obligase a contaminarse.</p>
+                    <p class="mb-2"><strong>9</strong> Y puso Dios a Daniel en gracia y en buena voluntad con el jefe de los eunucos;</p>
+                    <p class="mb-2"><strong>10</strong> y dijo el jefe de los eunucos a Daniel: Temo a mi señor el rey, que señaló vuestra comida y vuestra bebida; pues luego que él vea vuestros rostros más pálidos que los de los muchachos que son semejantes a vosotros, condenaréis para con el rey mi cabeza.</p>
+                    <p class="mb-2"><strong>11</strong> Entonces dijo Daniel a Melsar, que estaba puesto por el jefe de los eunucos sobre Daniel, Ananías, Misael y Azarías:</p>
+                    <p class="mb-2"><strong>12</strong> Te ruego que hagas la prueba con tus siervos por <input type="text" class="fill-in-blank" data-chapter="1" data-answer="diez días">, y nos den legumbres a comer, y agua a beber.</p>
+                    <p class="mb-2"><strong>13</strong> Compara luego nuestros rostros con los rostros de los muchachos que comen de la ración de la comida del rey, y haz después con tus siervos según veas.</p>
+                    <p class="mb-2"><strong>14</strong> Consintió, pues, con ellos en esto, y probó con ellos diez días.</p>
+                    <p class="mb-2"><strong>15</strong> Y al cabo de los diez días pareció el rostro de ellos mejor y más robusto que el de los otros muchachos que comían de la porción de la comida del rey.</p>
+                    <p class="mb-2"><strong>16</strong> Así, pues, Melsar se llevaba la porción de la comida de ellos y el vino que habían de beber, y les daba legumbres.</p>
+                    <p class="mb-2"><strong>17</strong> A estos cuatro muchachos Dios les dio conocimiento e inteligencia en todas las letras y ciencias; y Daniel tuvo entendimiento en toda visión y sueños.</p>
+                    <p class="mb-2"><strong>18</strong> Pasados, pues, los tres años que el rey había dicho que los trajesen, el jefe de los eunucos los trajo delante de Nabucodonosor.</p>
+                    <p class="mb-2"><strong>19</strong> Y el rey habló con ellos, y no fueron hallados entre todos ellos otros como Daniel, Ananías, Misael y Azarías; así, pues, estuvieron delante del rey.</p>
+                    <p class="mb-2"><strong>20</strong> En todo asunto de sabiduría e inteligencia que el rey les consultó, los halló <input type="text" class="fill-in-blank" data-chapter="1" data-answer="diez veces mejores"> que todos los magos y astrólogos que había en todo su reino.</p>
+                    <p class="mb-2"><strong>21</strong> Y continuó Daniel hasta el año primero del rey Ciro.</p>
+                `,
+                2: `<p><strong>1</strong> En el segundo año del reinado de Nabucodonosor, tuvo Nabucodonosor sueños, y se turbó su espíritu, y se le fue el sueño.</p>
+                    <p class="mb-2"><strong>2</strong> Y mandó el rey llamar a magos, astrólogos, encantadores y caldeos, para que le declarasen sus sueños. Vinieron, pues, y se presentaron delante del rey.</p>
+                    <p class="mb-2"><strong>3</strong> Y les dijo el rey: He tenido un sueño, y mi espíritu se ha turbado por saber el sueño.</p>
+                    <p class="mb-2"><strong>4</strong> Entonces hablaron los caldeos al rey en lengua aramea: Rey, para siempre vive; di el sueño a tus siervos, y te mostraremos la interpretación.</p>
+                    <p class="mb-2"><strong>5</strong> El rey respondió y dijo a los caldeos: El asunto se me fue; si no me mostráis el sueño y su interpretación, seréis hechos pedazos, y vuestras casas serán puestas por muladares.</p>
+                    <p class="mb-2"><strong>6</strong> Y si me mostráis el sueño y su interpretación, recibiréis de mí dones y recompensas y grande honra; decidme, pues, el sueño y su interpretación.</p>
+                    <p class="mb-2"><strong>7</strong> Respondieron por segunda vez, y dijeron: Diga el rey el sueño a sus siervos, y mostraremos su interpretación.</p>
+                    <p class="mb-2"><strong>8</strong> El rey respondió y dijo: Yo conozco ciertamente que vosotros ponéis dilación, porque veis que el asunto se me fue.</p>
+                    <p class="mb-2"><strong>9</strong> Si no me mostráis el sueño, una sola sentencia hay para vosotros. Ciertamente habéis premeditado decir mentira y perversidad delante de mí, hasta que cambie el tiempo. Decidme, pues, el sueño, para que yo sepa que me podéis dar su interpretación.</p>
+                    <p class="mb-2"><strong>10</strong> Los caldeos respondieron delante del rey, y dijeron: No hay hombre sobre la tierra que pueda declarar el asunto del rey; ni príncipe, ni grande, ni señor, preguntó cosa semejante a ningún mago ni astrólogo ni caldeo.</p>
+                    <p class="mb-2"><strong>11</strong> Y el asunto que el rey demanda es difícil, y no hay quien lo pueda declarar al rey, salvo los dioses cuya morada no es con la carne.</p>
+                    <p class="mb-2"><strong>12</strong> Por esto el rey con ira y con mucho enojo mandó que matasen a todos los sabios de Babilonia.</p>
+                    <p class="mb-2"><strong>13</strong> Y se publicó el edicto de que los sabios fueran muertos; y buscaron a Daniel y a sus compañeros para matarlos.</p>
+                    <p class="mb-2"><strong>14</strong> Entonces Daniel habló con prudencia y cordura a Arioc, capitán de la guardia del rey, que había salido para matar a los sabios de Babilonia.</p>
+                    <p class="mb-2"><strong>15</strong> Respondió y dijo a Arioc capitán del rey: ¿Por qué es tan apremiante este decreto del rey? Entonces Arioc hizo saber a Daniel lo que había.</p>
+                    <p class="mb-2"><strong>16</strong> Y Daniel entró y pidió al rey que le diese tiempo, y que él mostraría la interpretación al rey.</p>
+                    <p class="mb-2"><strong>17</strong> Luego se fue Daniel a su casa y lo hizo saber a Ananías, Misael y Azarías, sus compañeros,</p>
+                    <p class="mb-2"><strong>18</strong> para que pidiesen misericordias del Dios del cielo sobre este misterio, a fin de que Daniel y sus compañeros no pereciesen con los otros sabios de Babilonia.</p>
+                    <p class="mb-2"><strong>19</strong> Entonces el secreto fue revelado a Daniel en visión de noche; por lo cual bendijo Daniel al Dios del cielo.</p>
+                    <p class="mb-2"><strong>20</strong> Y Daniel habló y dijo: Sea bendito el nombre de Dios de siglos en siglos, porque suyos son el poder y la sabiduría.</p>
+                    <p class="mb-2"><strong>21</strong> Él muda los tiempos y las edades; quita reyes, y pone reyes; da la sabiduría a los sabios, y la ciencia a los entendidos.</p>
+                    <p class="mb-2"><strong>22</strong> Él revela lo profundo y lo escondido; conoce lo que está en tinieblas, y con él mora la luz.</p>
+                    <p class="mb-2"><strong>23</strong> A ti, oh Dios de mis padres, te doy gracias y te alabo, porque me has dado sabiduría y fuerza, y ahora me has revelado lo que te pedimos; pues nos has dado a conocer el asunto del rey.</p>
+                    <p class="mb-2"><strong>24</strong> Después de esto fue Daniel a Arioc, al cual el rey había puesto para matar a los sabios de Babilonia, y le dijo así: No mates a los sabios de Babilonia; llévame ante el rey, y yo le daré la interpretación.</p>
+                    <p class="mb-2"><strong>25</strong> Entonces Arioc llevó prontamente a Daniel ante el rey, y le dijo así: He hallado un varón de los deportados de Judá, el cual dará al rey la interpretación.</p>
+                    <p class="mb-2"><strong>26</strong> Respondió el rey y dijo a Daniel, al cual llamaban Beltsasar: ¿Podrás tú hacerme conocer el sueño que vi, y su interpretación?</p>
+                    <p class="mb-2"><strong>27</strong> Daniel respondió delante del rey, diciendo: El misterio que el rey demanda, ni sabios, ni astrólogos, ni magos, ni adivinos lo pueden enseñar al rey.</p>
+                    <p class="mb-2"><strong>28</strong> Pero hay un Dios en el cielo que revela los misterios, y él ha hecho saber al rey Nabucodonosor lo que ha de acontecer en los postreros días. Tu sueño, y las visiones de tu cabeza mientras estabas en tu cama, es éste:</p>
+                    <p class="mb-2"><strong>29</strong> Tú, oh rey, en tu cama te subieron pensamientos por saber lo que había de ser en lo por venir; y el que revela los misterios te mostró lo que ha de ser.</p>
+                    <p class="mb-2"><strong>30</strong> Y a mí me ha sido revelado este misterio, no porque en mí haya más sabiduría que en todos los vivientes, sino para que se dé a conocer al rey la interpretación, y para que entiendas los pensamientos de tu corazón.</p>
+                    <p class="mb-2"><strong>31</strong> Tú, oh rey, veías, y he aquí una gran imagen. Esta imagen, que era muy grande, y cuya gloria era muy sublime, estaba en pie delante de ti, y su aspecto era terrible.</p>
+                    <p class="mb-2"><strong>32</strong> La cabeza de esta imagen era de oro fino; su pecho y sus brazos, de plata; su vientre y sus muslos, de bronce;</p>
+                    <p class="mb-2"><strong>33</strong> sus piernas, de hierro; sus pies, en parte de hierro y en parte de barro cocido.</p>
+                    <p class="mb-2"><strong>34</strong> Estabas mirando hasta que una piedra fue cortada, no con mano, e hirió a la imagen en sus pies de hierro y de barro cocido, y los desmenuzó.</p>
+                    <p class="mb-2"><strong>35</strong> Entonces se desmenuzaron también el hierro, el barro cocido, el bronce, la plata y el oro, y fueron como tamo de las eras del verano; y se los llevó el viento, y ningún lugar se encontró para ellos. Mas la piedra que hirió a la imagen fue hecha un gran <input type="text" class="fill-in-blank" data-chapter="2" data-answer="monte"> que llenó toda la tierra.</p>
+                    <p class="mb-2"><strong>36</strong> Este es el sueño; también la interpretación de él diremos en presencia del rey.</p>
+                    <p class="mb-2"><strong>37</strong> Tú, oh rey, eres rey de reyes; porque el Dios del cielo te ha dado reino, poder, fuerza y majestad.</p>
+                    <p class="mb-2"><strong>38</strong> Y dondequiera que habitan hijos de hombres, bestias del campo y aves del cielo, él los ha entregado en tu mano, y te ha dado el dominio sobre todo; tú eres aquella cabeza de oro.</p>
+                    <p class="mb-2"><strong>39</strong> Y después de ti se levantará otro reino inferior al tuyo; y luego un tercer reino de bronce, el cual dominará sobre toda la tierra.</p>
+                    <p class="mb-2"><strong>40</strong> Y el cuarto reino será fuerte como hierro; y como el hierro desmenuza y rompe todas las cosas, y como el hierro que todo lo desmenuza, desmenuzará y quebrantará todo.</p>
+                    <p class="mb-2"><strong>41</strong> Y lo que viste de los pies y los dedos, en parte de barro cocido de alfarero y en parte de hierro, será un reino dividido; mas habrá en él algo de la fuerza del hierro, así como viste hierro mezclado con barro cocido.</p>
+                    <p class="mb-2"><strong>42</strong> Y por ser los dedos de los pies en parte de hierro y en parte de barro cocido, el reino será en parte fuerte, y en parte frágil.</p>
+                    <p class="mb-2"><strong>43</strong> Así como viste el hierro mezclado con barro, se mezclarán por medio de alianzas humanas; pero no se unirán el uno con el otro, como el hierro no se mezcla con el barro.</p>
+                    <p class="mb-2"><strong>44</strong> Y en los días de estos reyes el Dios del cielo levantará un reino que no será jamás destruido, ni será el reino dejado a otro pueblo; desmenuzará y consumirá a todos estos reinos, pero él permanecerá para siempre,</p>
+                    <p class="mb-2"><strong>45</strong> de la manera que viste que del monte fue cortada una piedra, no con mano, la cual desmenuzó el hierro, el bronce, el barro, la plata y el oro. El gran Dios ha mostrado al rey lo que ha de acontecer en lo por venir; y el sueño es verdadero, y fiel su interpretación.</p>
+                    <p class="mb-2"><strong>46</strong> Entonces el rey Nabucodonosor se postró sobre su rostro y se humilló ante Daniel, y mandó que le ofreciesen presentes e incienso.</p>
+                    <p class="mb-2"><strong>47</strong> El rey habló a Daniel, y dijo: Ciertamente el Dios vuestro es Dios de dioses, y Señor de los reyes, y el que revela los misterios, pues pudiste revelar este misterio.</p>
+                    <p class="mb-2"><strong>48</strong> Entonces el rey engrandeció a Daniel, y le dio muchos grandes dones, y le hizo gobernador de toda la provincia de Babilonia, y jefe supremo de todos los sabios de Babilonia.</p>
+                    <p class="mb-2"><strong>49</strong> Y a petición de Daniel, el rey puso sobre los negocios de la provincia de Babilonia a Sadrac, Mesac y Abed-nego; y Daniel estaba en la corte del rey.</p>
+                `,
+                3: `<p><strong>1</strong> El rey Nabucodonosor hizo una estatua de oro, cuya altura era de sesenta codos, y su anchura de seis codos; y la levantó en el campo de Dura, en la provincia de Babilonia.</p>
+                    <p class="mb-2"><strong>2</strong> Y envió el rey Nabucodonosor a que se reuniesen los sátrapas, los gobernadores, capitanes, oidores, tesoreros, consejeros, jueces, y todos los presidentes de las provincias, para que viniesen a la dedicación de la estatua que el rey Nabucodonosor había levantado.</p>
+                    <p class="mb-2"><strong>3</strong> Fueron, pues, reunidos los sátrapas, gobernadores, capitanes, oidores, tesoreros, consejeros, jueces, y todos los presidentes de las provincias, a la dedicación de la estatua que el rey Nabucodonosor había levantado; y estaban en pie delante de la estatua que había levantado el rey Nabucodonosor.</p>
+                    <p class="mb-2"><strong>4</strong> Y el pregonero anunciaba en alta voz: Mándase a vosotros, oh pueblos, naciones y lenguas,</p>
+                    <p class="mb-2"><strong>5</strong> que al oír el son de la corneta, de la flauta, del tamboril, del arpa, del salterio, de la zampoña y de todo instrumento de música, os postréis y adoréis la estatua de oro que el rey Nabucodonosor ha levantado;</p>
+                    <p class="mb-2"><strong>6</strong> y cualquiera que no se postre y adore, inmediatamente será echado dentro de un horno de fuego ardiendo.</p>
+                    <p class="mb-2"><strong>7</strong> Por tanto, al oír todos los pueblos el son de la corneta, de la flauta, del tamboril, del arpa, del salterio, de la zampoña y de todo instrumento de música, todos los pueblos, naciones y lenguas, se postraron y adoraron la estatua de oro que el rey Nabucodonosor había levantado.</p>
+                    <p class="mb-2"><strong>8</strong> Por esto en aquel tiempo algunos varones caldeos vinieron y acusaron a los judíos.</p>
+                    <p class="mb-2"><strong>9</strong> Hablaron y dijeron al rey Nabucodonosor: Rey, para siempre vive.</p>
+                    <p class="mb-2"><strong>10</strong> Tú, oh rey, has dado una ley que todo hombre que oiga el son de la corneta, de la flauta, del tamboril, del arpa, del salterio, de la zampoña y de todo instrumento de música, se postre y adore la estatua de oro;</p>
+                    <p class="mb-2"><strong>11</strong> y el que no se postre y adore, sea echado dentro de un horno de fuego ardiendo.</p>
+                    <p class="mb-2"><strong>12</strong> Hay unos varones judíos, los cuales pusiste sobre los negocios de la provincia de Babilonia: Sadrac, Mesac y Abed-nego; estos varones, oh rey, no te han respetado; no adoran tus dioses, ni adoran la estatua de oro que has levantado.</p>
+                    <p class="mb-2"><strong>13</strong> Entonces Nabucodonosor con ira y con enojo mandó que trajesen a Sadrac, Mesac y Abed-nego. Al instante fueron traídos estos varones delante del rey.</p>
+                    <p class="mb-2"><strong>14</strong> Habló Nabucodonosor y les dijo: ¿Es verdad, Sadrac, Mesac y Abed-nego, que vosotros no honráis a mi dios, ni adoráis la estatua de oro que he levantado?</p>
+                    <p class="mb-2"><strong>15</strong> Ahora, pues, ¿estáis dispuestos para que al oír el son de la corneta, de la flauta, del tamboril, del arpa, del salterio, de la zampoña y de todo instrumento de música, os postréis y adoréis la estatua que he hecho? Porque si no la adorareis, en la misma hora seréis echados en medio de un horno de fuego ardiendo; ¿y qué dios será aquel que os libre de mis manos?</p>
+                    <p class="mb-2"><strong>16</strong> Sadrac, Mesac y Abed-nego respondieron al rey Nabucodonosor, diciendo: No es necesario que te respondamos sobre este asunto.</p>
+                    <p class="mb-2"><strong>17</strong> He aquí nuestro Dios a quien servimos puede librarnos del horno de fuego ardiendo; y de tu mano, oh rey, nos librará.</p>
+                    <p class="mb-2"><strong>18</strong> Y si no, sepas, oh rey, que no serviremos a tus dioses, ni tampoco adoraremos la estatua de oro que has levantado.</p>
+                    <p class="mb-2"><strong>19</strong> Entonces Nabucodonosor se llenó de ira, y se demudó el aspecto de su rostro contra Sadrac, Mesac y Abed-nego, y ordenó que el horno se calentase <input type="text" class="fill-in-blank" data-chapter="3" data-answer="siete veces más"> de lo acostumbrado.</p>
+                    <p class="mb-2"><strong>20</strong> Y mandó a hombres muy vigorosos de su ejército que atasen a Sadrac, Mesac y Abed-nego, para echarlos en el horno de fuego ardiendo.</p>
+                    <p class="mb-2"><strong>21</strong> Y estos varones fueron atados con sus mantos, sus calzas, sus turbantes y sus vestidos, y fueron echados dentro del horno de fuego ardiendo.</p>
+                    <p class="mb-2"><strong>22</strong> Y como la orden del rey era apremiante, y lo habían calentado mucho, la llama del fuego mató a aquellos que habían alzado a Sadrac, Mesac y Abed-nego.</p>
+                    <p class="mb-2"><strong>23</strong> Y estos tres varones, Sadrac, Mesac y Abed-nego, cayeron atados dentro del horno de fuego ardiendo.</p>
+                    <p class="mb-2"><strong>24</strong> Entonces el rey Nabucodonosor se espantó, y se levantó apresuradamente y habló a los de su consejo, diciendo: ¿No echaron a tres varones atados dentro del fuego? Ellos respondieron al rey: Es verdad, oh rey.</p>
+                    <p class="mb-2"><strong>25</strong> Y él dijo: He aquí yo veo cuatro varones sueltos, que se pasean en medio del fuego sin sufrir ningún daño; y el aspecto del cuarto es semejante a <input type="text" class="fill-in-blank" data-chapter="3" data-answer="hijo de los dioses">.</p>
+                    <p class="mb-2"><strong>26</strong> Entonces Nabucodonosor se acercó a la puerta del horno de fuego ardiendo, y habló y dijo: Sadrac, Mesac y Abed-nego, siervos del Dios Altísimo, salid y venid. Entonces Sadrac, Mesac y Abed-nego salieron de en medio del fuego.</p>
+                    <p class="mb-2"><strong>27</strong> Y se juntaron los sátrapas, los gobernadores, los capitanes y los consejeros del rey, para mirar a estos varones, cómo el fuego no había tenido poder alguno sobre sus cuerpos, ni aun el cabello de sus cabezas se había quemado; sus ropas estaban intactas, y ni siquiera olor de fuego tenían.</p>
+                    <p class="mb-2"><strong>28</strong> Entonces Nabucodonosor dijo: Bendito sea el Dios de Sadrac, Mesac y Abed-nego, que envió su ángel y libró a sus siervos que confiaron en él, y que no cumplieron el edicto del rey, antes entregaron sus cuerpos para no servir ni adorar a dios alguno sino a su Dios.</p>
+                    <p class="mb-2"><strong>29</strong> Por tanto, decreto que todo pueblo, nación o lengua que dijere blasfemia contra el Dios de Sadrac, Mesac y Abed-nego, sea descuartizado, y su casa convertida en muladar; por cuanto no hay dios que pueda librar como éste.</p>
+                    <p class="mb-2"><strong>30</strong> Entonces el rey engrandeció a Sadrac, Mesac y Abed-nego en la provincia de Babilonia.</p>
+                `,
+                4: `<p><strong>1</strong> Nabucodonosor rey, a todos los pueblos, naciones y lenguas que moran en toda la tierra: Paz os sea multiplicada.</p>
+                    <p class="mb-2"><strong>2</strong> Las señales y milagros que el Dios Altísimo ha hecho conmigo, me ha parecido declararlos.</p>
+                    <p class="mb-2"><strong>3</strong> ¡Cuán grandes son sus señales, y cuán potentes sus maravillas! Su reino, reino sempiterno, y su señorío de generación en generación.</p>
+                    <p class="mb-2"><strong>4</strong> Yo Nabucodonosor estaba tranquilo en mi casa, y floreciente en mi palacio.</p>
+                    <p class="mb-2"><strong>5</strong> Vi un sueño que me espantó, y tendido en mi cama, las imaginaciones y visiones de mi cabeza me turbaron.</p>
+                    <p class="mb-2"><strong>6</strong> Por lo que di un decreto para que fuesen traídos delante de mí todos los sabios de Babilonia, para que me mostrasen la interpretación del sueño.</p>
+                    <p class="mb-2"><strong>7</strong> Vinieron, pues, magos, astrólogos, caldeos y adivinos; y les conté el sueño, pero no me mostraron su interpretación.</p>
+                    <p class="mb-2"><strong>8</strong> Hasta que al fin vino delante de mí Daniel, cuyo nombre es Beltsasar, conforme al nombre de mi dios, y en quien mora el espíritu de los dioses santos; y a él conté el sueño, diciendo:</p>
+                    <p class="mb-2"><strong>9</strong> Beltsasar, jefe de los magos, ya que sé que mora en ti el espíritu de los dioses santos, y que ningún misterio se te esconde, declárame las visiones de mi sueño que he visto, y su interpretación.</p>
+                    <p class="mb-2"><strong>10</strong> Estas son las visiones de mi cabeza mientras estaba en mi cama: Me parecía que veía en medio de la tierra un árbol, cuya altura era grande.</p>
+                    <p class="mb-2"><strong>11</strong> Crecía este árbol, y se hacía fuerte, y su copa llegaba hasta el cielo, y se veía desde todos los confines de la tierra.</p>
+                    <p class="mb-2"><strong>12</strong> Su follaje era hermoso y su fruto abundante, y había en él alimento para todos. Debajo de él se ponían a la sombra las bestias del campo, y en sus ramas hacían nido las aves del cielo, y se mantenía de él toda carne.</p>
+                    <p class="mb-2"><strong>13</strong> Veía en las visiones de mi cabeza mientras estaba en mi cama, y he aquí un vigilante y santo que descendía del cielo.</p>
+                    <p class="mb-2"><strong>14</strong> Y clamaba fuertemente y decía así: Cortad el árbol, y cercenad sus ramas; quitadle el follaje, y dispersad su fruto; huyan las bestias que están debajo de él, y las aves de sus ramas.</p>
+                    <p class="mb-2"><strong>15</strong> Pero la cepa de sus raíces dejaréis en la tierra, con atadura de hierro y de bronce en la hierba del campo; y sea mojado con el rocío del cielo, y con las bestias sea su parte entre la hierba de la tierra.</p>
+                    <p class="mb-2"><strong>16</strong> Su corazón sea cambiado de corazón de hombre, y le sea dado corazón de bestia, y pasen sobre él <input type="text" class="fill-in-blank" data-chapter="4" data-answer="siete tiempos">.</p>
+                    <p class="mb-2"><strong>17</strong> La sentencia es por decreto de los vigilantes, y por dicho de los santos la resolución, para que conozcan los vivientes que el Altísimo gobierna el reino de los hombres, y a quien él quiere lo da, y constituye sobre él al más humilde de los hombres.</p>
+                    <p class="mb-2"><strong>18</strong> Este es el sueño que yo, el rey Nabucodonosor, he visto. Y tú, Beltsasar, di la interpretación, por cuanto todos los sabios de mi reino no han podido mostrarme su interpretación; mas tú puedes, porque mora en ti el espíritu de los dioses santos.</p>
+                    <p class="mb-2"><strong>19</strong> Entonces Daniel, cuyo nombre era Beltsasar, quedó atónito casi una hora, y sus pensamientos le turbaban. El rey habló y dijo: Beltsasar, el sueño ni su interpretación te turben. Beltsasar respondió y dijo: Señor mío, el sueño sea para tus enemigos, y su interpretación para tus adversarios.</p>
+                    <p class="mb-2"><strong>20</strong> El árbol que viste, que crecía y se hacía fuerte, y cuya altura llegaba hasta el cielo, y que se veía de toda la tierra,</p>
+                    <p class="mb-2"><strong>21</strong> y cuyo follaje era hermoso, y su fruto abundante, y en que había alimento para todos, y debajo del cual moraban las bestias del campo, y en cuyas ramas anidaban las aves del cielo,</p>
+                    <p class="mb-2"><strong>22</strong> eres tú mismo, oh rey, que has crecido y te has hecho fuerte; pues tu grandeza ha crecido, y ha llegado hasta el cielo, y tu dominio hasta los confines de la tierra.</p>
+                    <p class="mb-2"><strong>23</strong> Y en cuanto a lo que vio el rey, un vigilante y santo que descendía del cielo y decía: Cortad el árbol y destruidlo; mas la cepa de sus raíces dejaréis en la tierra, con atadura de hierro y de bronce en la hierba del campo; y sea mojado con el rocío del cielo, y con las bestias del campo sea su parte, hasta que pasen sobre él siete tiempos;</p>
+                    <p class="mb-2"><strong>24</strong> esta es la interpretación, oh rey, y la sentencia del Altísimo, que ha venido sobre mi señor el rey:</p>
+                    <p class="mb-2"><strong>25</strong> Que te echarán de entre los hombres, y con las bestias del campo será tu morada, y con la hierba del campo te apacentarán como a los bueyes, y con el rocío del cielo serás bañado; y siete tiempos pasarán sobre ti, hasta que conozcas que el Altísimo tiene dominio en el reino de los hombres, y lo da a quien él quiere.</p>
+                    <p class="mb-2"><strong>26</strong> Y en cuanto a la orden de dejar en la tierra la cepa de las raíces del árbol, significa que tu reino te quedará firme, luego que entiendas que el cielo gobierna.</p>
+                    <p class="mb-2"><strong>27</strong> Por tanto, oh rey, acepta mi consejo, y redime tus pecados con justicia, y tus iniquidades con misericordias para con los oprimidos; porque tal vez será eso una prolongación de tu tranquilidad.</p>
+                    <p class="mb-2"><strong>28</strong> Todo esto vino sobre el rey Nabucodonosor.</p>
+                    <p class="mb-2"><strong>29</strong> Al cabo de <input type="text" class="fill-in-blank" data-chapter="4" data-answer="doce meses">, paseando en el palacio real de Babilonia,</p>
+                    <p class="mb-2"><strong>30</strong> habló el rey y dijo: ¿No es ésta la gran Babilonia que yo edifiqué para casa real con la fuerza de mi poder, y para gloria de mi majestad?</p>
+                    <p class="mb-2"><strong>31</strong> Aún estaba la palabra en la boca del rey, cuando descendió una voz del cielo: A ti se te dice, rey Nabucodonosor: El reino ha sido quitado de ti;</p>
+                    <p class="mb-2"><strong>32</strong> y de entre los hombres te arrojarán, y con las bestias del campo será tu morada, y como a los bueyes te apacentarán; y siete tiempos pasarán sobre ti, hasta que reconozcas que el Altísimo tiene dominio en el reino de los hombres, y lo da a quien él quiere.</p>
+                    <p class="mb-2"><strong>33</strong> En la misma hora se cumplió la palabra sobre Nabucodonosor, y fue echado de entre los hombres; y comía hierba como buey, y su cuerpo se mojaba con el rocío del cielo, hasta que su pelo creció como plumas de águila, y sus uñas como las de las aves.</p>
+                    <p class="mb-2"><strong>34</strong> Mas al fin del tiempo, yo Nabucodonosor alcé mis ojos al cielo, y mi razón me fue devuelta; y bendije al Altísimo, y alabé y glorifiqué al que vive para siempre, cuyo dominio es sempiterno, y su reino por todas las edades.</p>
+                    <p class="mb-2"><strong>35</strong> Todos los habitantes de la tierra son considerados como nada; y él hace según su voluntad en el ejército del cielo, y en los habitantes de la tierra, y no hay quien detenga su mano, y le diga: ¿Qué haces?</p>
+                    <p class="mb-2"><strong>36</strong> En el mismo tiempo mi razón me fue devuelta, y la majestad de mi reino, mi dignidad y mi grandeza volvieron a mí, y mis gobernadores y mis grandes me buscaron; y fui restablecido en mi reino, y mayor grandeza me fue añadida.</p>
+                    <p class="mb-2"><strong>37</strong> Ahora yo Nabucodonosor alabo, engrandezco y glorifico al Rey del cielo, porque todas sus obras son verdad, y sus caminos justicia; y humilla a los que andan con soberbia.</p>
+                `,
+                5: `<p><strong>1</strong> El rey Belsasar hizo un gran banquete a mil de sus príncipes, y en presencia de los mil bebía vino.</p>
+                    <p class="mb-2"><strong>2</strong> Belsasar, con el gusto del vino, mandó que trajesen los vasos de oro y de plata que Nabucodonosor su padre había traído del templo de Jerusalén, para que bebiesen en ellos el rey y sus príncipes, sus mujeres y sus concubinas.</p>
+                    <p class="mb-2"><strong>3</strong> Entonces trajeron los vasos de oro que habían traído del templo de la casa de Dios que estaba en Jerusalén, y bebieron en ellos el rey y sus príncipes, sus mujeres y sus concubinas.</p>
+                    <p class="mb-2"><strong>4</strong> Bebieron vino, y alabaron a los dioses de oro y de plata, de bronce, de hierro, de madera y de piedra.</p>
+                    <p class="mb-2"><strong>5</strong> En aquella misma hora aparecieron los dedos de una mano de hombre que escribía delante del candelero sobre lo encalado de la pared del palacio real, y el rey veía la palma de la mano que escribía.</p>
+                    <p class="mb-2"><strong>6</strong> Entonces el rey palideció, y sus pensamientos lo turbaron, y se debilitaron sus lomos, y sus rodillas daban la una contra la otra.</p>
+                    <p class="mb-2"><strong>7</strong> El rey clamó en alta voz que trajesen a los astrólogos, caldeos y adivinos; y habló el rey y dijo a los sabios de Babilonia: Cualquiera que lea esta escritura y me muestre su interpretación, será vestido de púrpura, y tendrá collar de oro en su cuello, y en el reino será el <input type="text" class="fill-in-blank" data-chapter="5" data-answer="tercer señor">.</p>
+                    <p class="mb-2"><strong>8</strong> Vinieron, pues, todos los sabios del rey, pero no pudieron leer la escritura, ni mostrar al rey su interpretación.</p>
+                    <p class="mb-2"><strong>9</strong> Entonces el rey Belsasar se turbó mucho, y su rostro se demudó; y sus príncipes estaban perplejos.</p>
+                    <p class="mb-2"><strong>10</strong> La reina, por las palabras del rey y de sus príncipes, entró a la sala del banquete, y habló la reina y dijo: Rey, para siempre vive; no te turben tus pensamientos, ni se demude tu rostro.</p>
+                    <p class="mb-2"><strong>11</strong> En tu reino hay un hombre en quien mora el espíritu de los dioses santos, y en los días de tu padre se halló en él luz e inteligencia y mayor sabiduría que en los magos y astrólogos; y el rey Nabucodonosor tu padre, oh rey, le constituyó jefe de los magos, astrólogos, caldeos y adivinos,</p>
+                    <p class="mb-2"><strong>12</strong> por cuanto hubo en él mayor espíritu y ciencia y entendimiento, para interpretar sueños y descifrar enigmas y resolver dudas; esto es, en Daniel, al cual el rey puso por nombre Beltsasar. Llámese, pues, ahora a Daniel, y él te dará la interpretación.</p>
+                    <p class="mb-2"><strong>13</strong> Entonces fue traído Daniel delante del rey. Y dijo el rey a Daniel: ¿Eres tú aquel Daniel de los hijos de la cautividad de Judá, que trajo de Judea el rey mi padre?</p>
+                    <p class="mb-2"><strong>14</strong> Yo he oído de ti que el espíritu de los dioses santos está en ti, y que en ti se halló luz, entendimiento y mayor sabiduría.</p>
+                    <p class="mb-2"><strong>15</strong> Y ahora fueron traídos delante de mí sabios y astrólogos para que leyesen esta escritura y me diesen su interpretación; pero no han podido mostrar la interpretación del asunto.</p>
+                    <p class="mb-2"><strong>16</strong> Yo, pues, he oído de ti que puedes dar interpretaciones y resolver dudas. Si ahora puedes leer esta escritura y darme su interpretación, serás vestido de púrpura, y collar de oro llevarás en tu cuello, y en el reino serás el tercer señor.</p>
+                    <p class="mb-2"><strong>17</strong> Entonces Daniel respondió y dijo delante del rey: Tus dones sean para ti, y tus recompensas dalas a otro. La escritura yo la leeré al rey, y le daré la interpretación.</p>
+                    <p class="mb-2"><strong>18</strong> El Altísimo Dios, oh rey, dio a Nabucodonosor tu padre reino, y grandeza, y gloria y majestad.</p>
+                    <p class="mb-2"><strong>19</strong> Y por la grandeza que le dio, todos los pueblos, naciones y lenguas temblaban y temían delante de él. A quien quería mataba, y a quien quería daba vida; engrandecía a quien quería, y a quien quería humillaba.</p>
+                    <p class="mb-2"><strong>20</strong> Mas cuando su corazón se ensoberbeció, y su espíritu se endureció en su orgullo, fue depuesto del trono de su reino, y despojado de su gloria.</p>
+                    <p class="mb-2"><strong>21</strong> Y fue echado de entre los hijos de los hombres, y su mente se hizo semejante a la de las bestias, y con los asnos monteses fue su morada; hierba comió como buey, y su cuerpo fue mojado con el rocío del cielo, hasta que conoció que el Altísimo Dios tiene dominio sobre el reino de los hombres, y que pone sobre él al que le place.</p>
+                    <p class="mb-2"><strong>22</strong> Y tú, Belsasar, hijo suyo, no has humillado tu corazón, sabiendo todo esto;</p>
+                    <p class="mb-2"><strong>23</strong> sino que contra el Señor del cielo te has ensoberbecido, y trajiste delante de ti los vasos de su casa, y tú y tus príncipes, tus mujeres y tus concubinas, bebisteis vino en ellos; además de esto, alabaste dioses de plata y oro, de bronce, de hierro, de madera y de piedra, que ni ven, ni oyen, ni saben; y al Dios en cuya mano está tu vida, y cuyos son todos tus caminos, nunca honraste.</p>
+                    <p class="mb-2"><strong>24</strong> Por esto, de su presencia fue enviada la palma de la mano que trazó esta escritura.</p>
+                    <p class="mb-2"><strong>25</strong> Y la escritura que trazó es: <input type="text" class="fill-in-blank" data-chapter="5" data-answer="MENE, MENE, TEKEL, UPARSIN">.</p>
+                    <p class="mb-2"><strong>26</strong> Esta es la interpretación del asunto: MENE: Contó Dios tu reino, y le ha puesto fin.</p>
+                    <p class="mb-2"><strong>27</strong> TEKEL: Pesado has sido en balanza, y fuiste hallado falto.</p>
+                    <p class="mb-2"><strong>28</strong> PERES: Tu reino ha sido roto, y dado a medos y persas.</p>
+                    <p class="mb-2"><strong>29</strong> Entonces mandó Belsasar vestir a Daniel de púrpura, y poner en su cuello un collar de oro, y proclamar que él era el tercer señor del reino.</p>
+                    <p class="mb-2"><strong>30</strong> La misma noche fue muerto Belsasar rey de los caldeos.</p>
+                    <p class="mb-2"><strong>31</strong> Y Darío de Media tomó el reino, siendo de sesenta y dos años.</p>
+                `,
+                6: `<p><strong>1</strong> Pareció bien a Darío constituir sobre el reino ciento veinte sátrapas, que estuviesen en todo el reino.</p>
+                    <p class="mb-2"><strong>2</strong> Y sobre ellos tres gobernadores, de los cuales Daniel era uno, a quienes estos sátrapas diesen cuenta, para que el rey no fuese perjudicado.</p>
+                    <p class="mb-2"><strong>3</strong> Pero Daniel mismo era superior a estos sátrapas y gobernadores, porque había en él un espíritu excelente; y el rey pensó en ponerlo sobre todo el reino.</p>
+                    <p class="mb-2"><strong>4</strong> Entonces los gobernadores y sátrapas buscaban ocasión para acusar a Daniel en lo relacionado al reino; mas no podían hallar ocasión alguna o falta, porque él era fiel, y ningún vicio ni falta fue hallado en él.</p>
+                    <p class="mb-2"><strong>5</strong> Entonces dijeron aquellos hombres: No hallaremos contra este Daniel ocasión alguna, si no la hallamos contra él en relación con la ley de su Dios.</p>
+                    <p class="mb-2"><strong>6</strong> Entonces estos gobernadores y sátrapas se juntaron de común acuerdo ante el rey, y le dijeron así: Rey Darío, para siempre vive.</p>
+                    <p class="mb-2"><strong>7</strong> Todos los gobernadores del reino, magistrados, sátrapas, príncipes y capitanes, han acordado por consejo que promulgues un edicto real y lo confirmes, que cualquiera que en el espacio de <input type="text" class="fill-in-blank" data-chapter="6" data-answer="treinta días"> pida petición de cualquier dios u hombre fuera de ti, oh rey, sea echado en el foso de los leones.</p>
+                    <p class="mb-2"><strong>8</strong> Ahora, oh rey, confirma el edicto y fírmalo, para que no pueda ser revocado, conforme a la ley de Media y de Persia, la cual no puede ser abrogada.</p>
+                    <p class="mb-2"><strong>9</strong> Firmó, pues, el rey Darío el edicto y la prohibición.</p>
+                    <p class="mb-2"><strong>10</strong> Cuando Daniel supo que el edicto había sido firmado, entró en su casa, y abiertas las ventanas de su cámara que daban hacia Jerusalén, se arrodillaba tres veces al día, y oraba y daba gracias delante de su Dios, como lo solía hacer antes.</p>
+                    <p class="mb-2"><strong>11</strong> Entonces se juntaron aquellos hombres, y hallaron a Daniel orando y rogando delante de su Dios.</p>
+                    <p class="mb-2"><strong>12</strong> Fueron luego y hablaron delante del rey acerca del edicto real: ¿No has confirmado un edicto que cualquiera que en el espacio de treinta días pida a cualquier dios u hombre fuera de ti, oh rey, sea echado en el foso de los leones? Respondió el rey y dijo: Verdad es, conforme a la ley de Media y de Persia, la cual no puede ser abrogada.</p>
+                    <p class="mb-2"><strong>13</strong> Entonces respondieron y dijeron al rey: Daniel, que es de los hijos de los cautivos de Judá, no te respeta a ti, oh rey, ni acata el edicto que confirmaste, sino que tres veces al día hace su petición.</p>
+                    <p class="mb-2"><strong>14</strong> El rey, al oír el asunto, le pesó en gran manera, y se propuso librar a Daniel; y hasta la puesta del sol trabajó para librarle.</p>
+                    <p class="mb-2"><strong>15</strong> Pero aquellos hombres se juntaron al rey y le dijeron: Sepas, oh rey, que es ley de Media y de Persia que ningún edicto u ordenanza que el rey confirma, puede ser abrogado.</p>
+                    <p class="mb-2"><strong>16</strong> Entonces el rey mandó, y trajeron a Daniel, y le echaron en el foso de los leones. Y el rey habló y dijo a Daniel: El Dios tuyo, a quien tú continuamente sirves, él te libre.</p>
+                    <p class="mb-2"><strong>17</strong> Y fue traída una piedra y puesta sobre la boca del foso, la cual selló el rey con su anillo y con el anillo de sus príncipes, para que el acuerdo acerca de Daniel no se cambiase.</p>
+                    <p class="mb-2"><strong>18</strong> Luego el rey se fue a su palacio, y se acostó ayuno; ni instrumentos de música fueron traídos delante de él, y se le fue el sueño.</p>
+                    <p class="mb-2"><strong>19</strong> El rey se levantó muy de mañana, y fue apresuradamente al foso de los leones.</p>
+                    <p class="mb-2"><strong>20</strong> Y acercándose al foso llamó a voces a Daniel con voz triste, y le dijo: Daniel, siervo del Dios viviente, el Dios tuyo, a quien tú continuamente sirves, ¿te ha podido librar de los leones?</p>
+                    <p class="mb-2"><strong>21</strong> Entonces Daniel respondió al rey: Oh rey, para siempre vive.</p>
+                    <p class="mb-2"><strong>22</strong> Mi Dios envió su ángel, el cual cerró la boca de los leones, para que no me hiciesen daño, porque delante de él fui hallado inocente; y aun delante de ti, oh rey, yo no he hecho nada malo.</p>
+                    <p class="mb-2"><strong>23</strong> Entonces se alegró el rey en gran manera a causa de él, y mandó sacar a Daniel del foso; y fue Daniel sacado del foso, y ninguna lesión se halló en él, porque había confiado en su Dios.</p>
+                    <p class="mb-2"><strong>24</strong> Y mandó el rey, y fueron traídos aquellos hombres que habían acusado a Daniel, y fueron echados en el foso de los leones ellos, sus hijos y sus mujeres; y aún no habían llegado al fondo del foso, cuando los leones se apoderaron de ellos y quebraron todos sus huesos.</p>
+                    <p class="mb-2"><strong>25</strong> Entonces el rey Darío escribió a todos los pueblos, naciones y lenguas que habitan en toda la tierra: Paz os sea multiplicada.</p>
+                    <p class="mb-2"><strong>26</strong> De parte mía es puesto decreto, que en todo el dominio de mi reino, todos teman y tiemblen ante la presencia del Dios de Daniel; porque él es el Dios viviente y permanente por todos los siglos, y su reino no será jamás destruido, y su dominio durará hasta el fin.</p>
+                    <p class="mb-2"><strong>27</strong> Él salva y libra, y hace señales y maravillas en el cielo y en la tierra; él ha librado a Daniel del poder de los leones.</p>
+                    <p class="mb-2"><strong>28</strong> Y este Daniel prosperó durante el reinado de Darío y durante el reinado de Ciro el <input type="text" class="fill-in-blank" data-chapter="6" data-answer="persa">.</p>
+                `,
+                7: `<p><strong>1</strong> En el primer año de Belsasar rey de Babilonia tuvo Daniel un sueño, y visiones de su cabeza en su cama; luego escribió el sueño, y relató lo principal del asunto.</p>
+                    <p class="mb-2"><strong>2</strong> Habló Daniel y dijo: Veía yo en mi visión de noche, y he aquí que los cuatro vientos del cielo combatían en el gran mar.</p>
+                    <p class="mb-2"><strong>3</strong> Y cuatro bestias grandes, diferentes la una de la otra, subían del mar.</p>
+                    <p class="mb-2"><strong>4</strong> La primera era como <input type="text" class="fill-in-blank" data-chapter="7" data-answer="león">, y tenía alas de águila. Yo estaba mirando hasta que sus alas fueron arrancadas, y fue levantada del suelo y se puso enhiesta sobre los pies a manera de hombre, y le fue dado corazón de hombre.</p>
+                    <p class="mb-2"><strong>5</strong> Y he aquí otra segunda bestia, semejante a un <input type="text" class="fill-in-blank" data-chapter="7" data-answer="oso">, la cual se alzaba de un costado más que del otro, y tenía en su boca tres costillas entre sus dientes; y le fue dicho así: Levántate, devora mucha carne.</p>
+                    <p class="mb-2"><strong>6</strong> Después de esto miré, y he aquí otra, semejante a un <input type="text" class="fill-in-blank" data-chapter="7" data-answer="leopardo">, y tenía cuatro alas de ave en sus espaldas; tenía también esta bestia cuatro cabezas; y le fue dado dominio.</p>
+                    <p class="mb-2"><strong>7</strong> Después de esto miraba yo en las visiones de la noche, y he aquí la cuarta bestia, espantosa y terrible y en gran manera fuerte, la cual tenía unos dientes grandes de hierro; devoraba y desmenuzaba, y las sobras hollaba con sus pies; y era muy diferente de todas las bestias que vi antes de ella, y tenía <input type="text" class="fill-in-blank" data-chapter="7" data-answer="diez cuernos">.</p>
+                    <p class="mb-2"><strong>8</strong> Mientras yo contemplaba los cuernos, he aquí que otro cuerno pequeño salía entre ellos, y delante de él fueron arrancados tres cuernos de los primeros; y he aquí que este cuerno tenía ojos como de hombre, y una boca que hablaba grandes cosas.</p>
+                    <p class="mb-2"><strong>9</strong> Estuve mirando hasta que fueron puestos tronos, y se sentó un Anciano de días, cuyo vestido era blanco como la nieve, y el pelo de su cabeza como lana limpia; su trono llama de fuego, y las ruedas del mismo, fuego ardiente.</p>
+                    <p class="mb-2"><strong>10</strong> Un río de fuego procedía y salía de delante de él; millares de millares le servían, y millones de millones asistían delante de él; el Juez se sentó, y los libros fueron abiertos.</p>
+                    <p class="mb-2"><strong>11</strong> Yo entonces miraba a causa del sonido de las grandes palabras que hablaba el cuerno; y mientras miraba, la bestia fue muerta, y su cuerpo destruido y entregado para ser quemado en el fuego.</p>
+                    <p class="mb-2"><strong>12</strong> Habían también quitado a las otras bestias su dominio, pero les había sido prolongada la vida por cierto tiempo.</p>
+                    <p class="mb-2"><strong>13</strong> Miraba yo en la visión de la noche, y he aquí con las nubes del cielo venía uno como un <input type="text" class="fill-in-blank" data-chapter="7" data-answer="hijo de hombre">, que vino hasta el Anciano de días, y le hicieron acercarse delante de él.</p>
+                    <p class="mb-2"><strong>14</strong> Y le fue dado dominio, gloria y reino, para que todos los pueblos, naciones y lenguas le sirvieran; su dominio es dominio eterno, que nunca pasará, y su reino uno que no será destruido.</p>
+                    <p class="mb-2"><strong>15</strong> Se me turbó el espíritu a mí, Daniel, en medio de mi cuerpo, y las visiones de mi cabeza me asombraron.</p>
+                    <p class="mb-2"><strong>16</strong> Me acerqué a uno de los que asistían, y le pregunté la verdad acerca de todo esto. Y me habló, y me dio la interpretación de las cosas.</p>
+                    <p class="mb-2"><strong>17</strong> Estas cuatro grandes bestias son cuatro reyes que se levantarán en la tierra.</p>
+                    <p class="mb-2"><strong>18</strong> Después recibirán el reino los santos del Altísimo, y poseerán el reino hasta el siglo, eternamente y para siempre.</p>
+                    <p class="mb-2"><strong>19</strong> Entonces tuve deseo de saber la verdad acerca de la cuarta bestia, que era tan diferente de todas las otras, espantosa en gran manera, que tenía dientes de hierro y uñas de bronce, que devoraba y desmenuzaba, y las sobras hollaba con sus pies;</p>
+                    <p class="mb-2"><strong>20</strong> asimismo acerca de los diez cuernos que tenía en su cabeza, y del otro que le había subido, delante del cual habían caído tres; y este mismo cuerno tenía ojos, y boca que hablaba grandes cosas, y parecía más grande que sus compañeros.</p>
+                    <p class="mb-2"><strong>21</strong> Y veía yo que este cuerno hacía guerra contra los santos, y los vencía,</p>
+                    <p class="mb-2"><strong>22</strong> hasta tanto que vino el Anciano de días, y se dio el juicio a los santos del Altísimo; y llegó el tiempo, y los santos recibieron el reino.</p>
+                    <p class="mb-2"><strong>23</strong> Dijo así: La cuarta bestia será un cuarto reino en la tierra, el cual será diferente de todos los otros reinos, y a toda la tierra devorará, hollarán y desmenuzará.</p>
+                    <p class="mb-2"><strong>24</strong> Y los diez cuernos significan que de aquel reino se levantarán diez reyes; y tras ellos se levantará otro, el cual será diferente de los primeros, y a tres reyes derribará.</p>
+                    <p class="mb-2"><strong>25</strong> Y hablará palabras contra el Altísimo, y a los santos del Altísimo quebrantará, y pensará en cambiar los tiempos y la ley; y serán entregados en su mano hasta tiempo, y tiempos, y medio tiempo.</p>
+                    <p class="mb-2"><strong>26</strong> Pero se sentará el Juez, y le quitarán su dominio para que sea destruido y arruinado hasta el fin,</p>
+                    <p class="mb-2"><strong>27</strong> y que el reino, y el dominio y la majestad de los reinos de debajo de todo el cielo, sea dado al pueblo de los santos del Altísimo, cuyo reino es reino eterno, y todos los dominios le servirán y obedecerán.</p>
+                    <p class="mb-2"><strong>28</strong> Aquí fue el fin del asunto. En cuanto a mí, Daniel, mis pensamientos me turbaron mucho, y mi rostro se me mudó; pero guardé el asunto en mi corazón.</p>
+                `,
+                8: `<p><strong>1</strong> En el tercer año del reinado del rey Belsasar me apareció una visión a mí, Daniel, después de aquella que me había aparecido antes.</p>
+                    <p class="mb-2"><strong>2</strong> Vi en visión; y cuando la vi, yo estaba en Susa, capital del reino, que está en la provincia de Elam; vi, pues, en la visión, estando junto al río <input type="text" class="fill-in-blank" data-chapter="8" data-answer="Ulai">.</p>
+                    <p class="mb-2"><strong>3</strong> Alcé mis ojos y miré, y he aquí un carnero que estaba delante del río, y tenía dos cuernos; y aunque los cuernos eran altos, uno era más alto que el otro, y el más alto subió después.</p>
+                    <p class="mb-2"><strong>4</strong> Vi que el carnero hería con los cuernos al poniente, al norte y al sur, y que ninguna bestia podía parar delante de él, ni había quien escapase de su poder; y hacía conforme a su voluntad, y se engrandecía.</p>
+                    <p class="mb-2"><strong>5</strong> Mientras yo consideraba esto, he aquí un macho cabrío venía del lado del poniente sobre la faz de toda la tierra, sin tocar tierra; y aquel macho cabrío tenía un cuerno notable entre sus ojos.</p>
+                    <p class="mb-2"><strong>6</strong> Y vino hasta el carnero de dos cuernos, al cual yo había visto en la ribera, y corrió contra él con la furia de su fuerza.</p>
+                    <p class="mb-2"><strong>7</strong> Y lo vi que llegó junto al carnero, y se levantó contra él y lo hirió, y le quebró sus dos cuernos, y el carnero no tenía fuerzas para pararse delante de él; lo derribó, por tanto, en tierra, y lo pisoteó; y no hubo quien librase al carnero de su poder.</p>
+                    <p class="mb-2"><strong>8</strong> Y el macho cabrío se engrandeció sobremanera; pero estando en su mayor fuerza, aquel gran cuerno fue quebrado, y en su lugar salieron <input type="text" class="fill-in-blank" data-chapter="8" data-answer="cuatro cuernos notables"> hacia los cuatro vientos del cielo.</p>
+                    <p class="mb-2"><strong>9</strong> Y de uno de ellos salió un cuerno pequeño, que creció mucho al sur, y al oriente, y hacia la tierra gloriosa.</p>
+                    <p class="mb-2"><strong>10</strong> Y se engrandeció hasta el ejército del cielo; y parte del ejército y de las estrellas echó por tierra, y las pisoteó.</p>
+                    <p class="mb-2"><strong>11</strong> Aun se engrandeció contra el príncipe de los ejércitos, y por él fue quitado el continuo sacrificio, y el lugar de su santuario fue echado por tierra.</p>
+                    <p class="mb-2"><strong>12</strong> Y a causa de la prevaricación le fue entregado el ejército junto con el continuo sacrificio; y echó por tierra la verdad, e hizo cuanto quiso, y prosperó.</p>
+                    <p class="mb-2"><strong>13</strong> Entonces oí a un santo que hablaba; y otro santo preguntó a aquel que hablaba: ¿Hasta cuándo durará la visión del continuo sacrificio, y la prevaricación asoladora, entregando el santuario y el ejército para ser pisoteados?</p>
+                    <p class="mb-2"><strong>14</strong> Y él me dijo: Hasta <input type="text" class="fill-in-blank" data-chapter="8" data-answer="dos mil trescientas tardes y mañanas">; luego el santuario será purificado.</p>
+                    <p class="mb-2"><strong>15</strong> Y aconteció que mientras yo Daniel consideraba la visión y procuraba comprenderla, he aquí se puso delante de mí uno con apariencia de hombre.</p>
+                    <p class="mb-2"><strong>16</strong> Y oí una voz de hombre entre las riberas del Ulai, que gritó y dijo: Gabriel, enseña a éste la visión.</p>
+                    <p class="mb-2"><strong>17</strong> Vino luego cerca de donde yo estaba; y con su venida me asombré, y me postré sobre mi rostro. Pero él me dijo: Entiende, hijo de hombre, porque la visión es para el tiempo del fin.</p>
+                    <p class="mb-2"><strong>18</strong> Mientras él hablaba conmigo, caí en un profundo sueño sobre mi rostro en tierra; pero él me tocó, y me hizo estar en pie.</p>
+                    <p class="mb-2"><strong>19</strong> Y dijo: He aquí yo te enseñaré lo que ha de venir al fin de la ira; porque la visión es para el tiempo determinado del fin.</p>
+                    <p class="mb-2"><strong>20</strong> En cuanto al carnero que viste, que tenía dos cuernos, éstos son los reyes de Media y de Persia.</p>
+                    <p class="mb-2"><strong>21</strong> Y el macho cabrío es el rey de Grecia; y el cuerno grande que tenía entre sus ojos es el rey primero.</p>
+                    <p class="mb-2"><strong>22</strong> Y en cuanto al cuerno que fue quebrado, y sucedieron cuatro en su lugar, significa que cuatro reinos se levantarán de esa nación, aunque no con la fuerza de él.</p>
+                    <p class="mb-2"><strong>23</strong> Y al fin del reinado de éstos, cuando los transgresores lleguen al colmo, se levantará un rey altivo de rostro y entendido en enigmas.</p>
+                    <p class="mb-2"><strong>24</strong> Y su poder se fortalecerá, mas no con fuerza propia; y causará grandes ruinas, y prosperará, y hará arbitrariamente, y destruirá a los fuertes y al pueblo de los santos.</p>
+                    <p class="mb-2"><strong>25</strong> Con su sagacidad hará prosperar el engaño en su mano; y en su corazón se engrandecerá, y sin aviso destruirá a muchos; y se levantará contra el Príncipe de los príncipes, pero será quebrantado no con mano humana.</p>
+                    <p class="mb-2"><strong>26</strong> La visión de las tardes y mañanas que se ha referido es verdadera; y tú guarda la visión, porque es para muchos días.</p>
+                    <p class="mb-2"><strong>27</strong> Y yo Daniel quedé quebrantado, y estuve enfermo algunos días, y cuando me levanté, atendí los negocios del rey; pero estaba espantado a causa de la visión, y no la entendía.</p>
+                `,
+                9: `<p><strong>1</strong> En el año primero de Darío hijo de Asuero, de la nación de los medos, el cual fue puesto por rey sobre el reino de los caldeos,</p>
+                    <p class="mb-2"><strong>2</strong> en el año primero de su reinado, yo Daniel entendí en los libros que el número de los años de que habló Jehová al profeta Jeremías, acerca de la desolación de Jerusalén, era de <input type="text" class="fill-in-blank" data-chapter="9" data-answer="setenta años">.</p>
+                    <p class="mb-2"><strong>3</strong> Y volví mi rostro al Señor Dios, buscándole en oración y ruego, en ayuno, cilicio y ceniza.</p>
+                    <p class="mb-2"><strong>4</strong> Y oré a Jehová mi Dios e hice confesión diciendo: Oh Señor, Dios grande y temible, que guardas el pacto y la misericordia con los que te aman y guardan tus mandamientos;</p>
+                    <p class="mb-2"><strong>5</strong> hemos pecado, hemos cometido iniquidad, hemos actuado impíamente, y hemos sido rebeldes, y nos hemos apartado de tus mandamientos y de tus ordenanzas.</p>
+                    <p class="mb-2"><strong>6</strong> No hemos obedecido a tus siervos los profetas, que en tu nombre hablaron a nuestros reyes, a nuestros príncipes, a nuestros padres y a todo el pueblo de la tierra.</p>
+                    <p class="mb-2"><strong>7</strong> Tuya es, oh Señor, la justicia, y nuestra la confusión de rostro, como en el día de hoy llevan los varones de Judá, los moradores de Jerusalén, y todo Israel, los de cerca y los de lejos, en todas las tierras adonde los has echado a causa de su rebelión con que contra ti se rebelaron.</p>
+                    <p class="mb-2"><strong>8</strong> Oh Jehová, nuestra es la confusión de rostro, de nuestros reyes, de nuestros príncipes y de nuestros padres; porque contra ti pecamos.</p>
+                    <p class="mb-2"><strong>9</strong> De Jehová nuestro Dios es el tener misericordia y el perdonar, aunque contra él nos hemos rebelado,</p>
+                    <p class="mb-2"><strong>10</strong> y no obedecimos a la voz de Jehová nuestro Dios, para andar en sus leyes que él nos dio por medio de sus siervos los profetas.</p>
+                    <p class="mb-2"><strong>11</strong> Todo Israel traspasó tu ley apartándose para no obedecer tu voz; por tanto, ha caído sobre nosotros la maldición y el juramento que está escrito en la ley de Moisés, siervo de Dios; porque contra él pecamos.</p>
+                    <p class="mb-2"><strong>12</strong> Y él ha cumplido la palabra que habló sobre nosotros y sobre nuestros jueces que nos gobernaron, trayendo sobre nosotros tan grande mal; pues nunca fue hecho debajo del cielo nada semejante a lo que se ha hecho contra Jerusalén.</p>
+                    <p class="mb-2"><strong>13</strong> Conforme está escrito en la ley de Moisés, todo este mal vino sobre nosotros; y no hemos implorado el favor de Jehová nuestro Dios, para convertirnos de nuestras maldades y entender tu verdad.</p>
+                    <p class="mb-2"><strong>14</strong> Por tanto, Jehová veló sobre el mal y lo trajo sobre nosotros; porque justo es Jehová nuestro Dios en todas sus obras que ha hecho, pues no hemos obedecido a su voz.</p>
+                    <p class="mb-2"><strong>15</strong> Ahora pues, Señor Dios nuestro, que sacaste a tu pueblo de la tierra de Egipto con mano poderosa, y te hiciste de nombre cual en este día; hemos pecado, hemos hecho impíamente.</p>
+                    <p class="mb-2"><strong>16</strong> Oh Señor, conforme a todos tus actos de justicia, apártese ahora de tu ciudad Jerusalén, tu santo monte, todo tu furor y tu ira; porque a causa de nuestros pecados, y por la maldad de nuestros padres, Jerusalén y tu pueblo son el oprobio de todos en derredor nuestro.</p>
+                    <p class="mb-2"><strong>17</strong> Ahora pues, Dios nuestro, oye la oración de tu siervo, y sus ruegos; y haz que tu rostro resplandezca sobre tu santuario asolado, por amor del Señor.</p>
+                    <p class="mb-2"><strong>18</strong> Inclina, oh Dios mío, tu oído, y oye; abre tus ojos, y mira nuestras desolaciones, y la ciudad sobre la cual es invocado tu nombre; porque no elevamos nuestros ruegos ante ti confiados en nuestras justicias, sino en tus muchas misericordias.</p>
+                    <p class="mb-2"><strong>19</strong> Oye, Señor; oh Señor, perdona; presta oído, Señor, y haz; no tardes, por amor de ti mismo, Dios mío; porque tu nombre es invocado sobre tu ciudad y sobre tu pueblo.</p>
+                    <p class="mb-2"><strong>20</strong> Aún estaba hablando y orando, y confesando mi pecado y el pecado de mi pueblo Israel, y derramaba mi ruego delante de Jehová mi Dios por el monte santo de mi Dios;</p>
+                    <p class="mb-2"><strong>21</strong> aún estaba hablando en oración, cuando el varón Gabriel, a quien había visto en la visión al principio, volando con presteza, vino a mí como a la hora del sacrificio de la tarde.</p>
+                    <p class="mb-2"><strong>22</strong> Y me hizo entender, y habló conmigo, diciendo: Daniel, ahora he salido para darte sabiduría y entendimiento.</p>
+                    <p class="mb-2"><strong>23</strong> Al principio de tus ruegos fue dada la orden, y yo he venido para enseñártela, porque tú eres muy amado. Entiende, pues, la orden, y entiende la visión.</p>
+                    <p class="mb-2"><strong>24</strong> Setenta semanas están determinadas sobre tu pueblo y sobre tu santa ciudad, para terminar la prevaricación, y poner fin al pecado, y expiar la iniquidad, para traer la justicia perdurable, y sellar la visión y la profecía, y ungir al Santo de los santos.</p>
+                    <p class="mb-2"><strong>25</strong> Sabe, pues, y entiende, que desde la salida de la orden para restaurar y edificar a Jerusalén hasta el Mesías Príncipe, habrá siete semanas, y sesenta y dos semanas; se volverá a edificar la plaza y el muro en tiempos de angustia.</p>
+                    <p class="mb-2"><strong>26</strong> Y después de las sesenta y dos semanas se quitará la vida al Mesías, mas no por sí; y el pueblo de un príncipe que ha de venir destruirá la ciudad y el santuario; y su fin será con inundación, y hasta el fin de la guerra durarán las desolaciones.</p>
+                    <p class="mb-2"><strong>27</strong> Y por otra semana confirmará el pacto con muchos; y a la mitad de la semana hará cesar el sacrificio y la ofrenda. Después con la muchedumbre de las abominaciones vendrá el desolador, hasta que venga la consumación, y lo que está determinado se derrame sobre el desolador.</p>
+                `,
+                10: `<p><strong>1</strong> En el año tercero de Ciro rey de Persia fue revelada palabra a Daniel, llamado Beltsasar; y la palabra era verdadera, y el conflicto grande; pero él comprendió la palabra, y tuvo inteligencia en la visión.</p>
+                    <p class="mb-2"><strong>2</strong> En aquellos días yo Daniel estuve afligido por <input type="text" class="fill-in-blank" data-chapter="10" data-answer="tres semanas">.</p>
+                    <p class="mb-2"><strong>3</strong> No comí manjar delicado, ni entró en mi boca carne ni vino, ni me ungí con ungüento, hasta que se cumplieron las tres semanas.</p>
+                    <p class="mb-2"><strong>4</strong> Y el día veinticuatro del mes primero estaba yo a la orilla del gran río Hidekel.</p>
+                    <p class="mb-2"><strong>5</strong> Y alcé mis ojos y miré, y he aquí un varón vestido de lino, y ceñidos sus lomos de oro de Ufaz.</p>
+                    <p class="mb-2"><strong>6</strong> Su cuerpo era como de berilo, y su rostro parecía un relámpago, y sus ojos como antorchas de fuego, y sus brazos y sus pies como de color de bronce bruñido, y el sonido de sus palabras como el estruendo de una multitud.</p>
+                    <p class="mb-2"><strong>7</strong> Y sólo yo, Daniel, vi aquella visión, y no la vieron los hombres que estaban conmigo, sino que se apoderó de ellos un gran temor, y huyeron y se escondieron.</p>
+                    <p class="mb-2"><strong>8</strong> Quedé, pues, yo solo, y vi esta gran visión, y no quedó fuerza en mí, antes mi fuerza se cambió en desfallecimiento, y no tuve vigor alguno.</p>
+                    <p class="mb-2"><strong>9</strong> Pero oí el sonido de sus palabras; y al oír el sonido de sus palabras, caí sobre mi rostro en un profundo sueño, con mi rostro en tierra.</p>
+                    <p class="mb-2"><strong>10</strong> Y he aquí una mano me tocó, e hizo que me pusiese sobre mis rodillas y sobre las palmas de mis manos.</p>
+                    <p class="mb-2"><strong>11</strong> Y me dijo: Daniel, varón muy amado, está atento a las palabras que te hablaré, y ponte en pie; porque a ti he sido enviado ahora. Y al hablarme esto, me puse en pie temblando.</p>
+                    <p class="mb-2"><strong>12</strong> Entonces me dijo: Daniel, no temas; porque desde el primer día que dispusiste tu corazón a entender y a humillarte en la presencia de tu Dios, fueron oídas tus palabras; y a causa de tus palabras yo he venido.</p>
+                    <p class="mb-2"><strong>13</strong> Mas el príncipe del reino de Persia se me opuso <input type="text" class="fill-in-blank" data-chapter="10" data-answer="veintiún días">; pero he aquí Miguel, uno de los principales príncipes, vino para ayudarme, y quedé allí con los reyes de Persia.</p>
+                    <p class="mb-2"><strong>14</strong> He venido para hacerte saber lo que ha de venir a tu pueblo en los postreros días; porque la visión es para muchos días.</p>
+                    <p class="mb-2"><strong>15</strong> Mientras me hablaba estas palabras, incliné mi rostro a tierra y enmudecí.</p>
+                    <p class="mb-2"><strong>16</strong> Pero he aquí, uno con semejanza de hijo de hombre tocó mis labios. Entonces abrí mi boca y hablé, y dije al que estaba delante de mí: Señor mío, con la visión me han sobrevenido dolores, y no me queda fuerza.</p>
+                    <p class="mb-2"><strong>17</strong> ¿Cómo, pues, podrá el siervo de mi señor hablar con mi señor? Porque al instante me faltó la fuerza, y no me quedó aliento.</p>
+                    <p class="mb-2"><strong>18</strong> Y otra vez me tocó aquel que tenía semejanza de hombre, y me fortaleció,</p>
+                    <p class="mb-2"><strong>19</strong> y me dijo: Muy amado, no temas; la paz sea contigo; esfuérzate y aliéntate. Y mientras él me hablaba, recobré las fuerzas, y dije: Hable mi señor, porque me has fortalecido.</p>
+                    <p class="mb-2"><strong>20</strong> Y dijo: ¿Sabes por qué he venido a ti? Para volver a pelear contra el príncipe de Persia; y al salir yo, he aquí el príncipe de Grecia vendrá.</p>
+                    <p class="mb-2"><strong>21</strong> Pero yo te declararé lo que está escrito en el libro de la verdad; y ninguno me ayuda contra ellos, sino Miguel vuestro príncipe.</p>
+                `,
+                11: `<p><strong>1</strong> Y yo mismo, en el año primero de Darío el medo, estuve para animarle y fortalecerle.</p>
+                    <p class="mb-2"><strong>2</strong> Y ahora yo te declaro la verdad. He aquí que aún habrá tres reyes en Persia, y el cuarto se hará de grandes riquezas más que todos ellos; y al hacerse fuerte con sus riquezas, levantará a todos contra el reino de Grecia.</p>
+                    <p class="mb-2"><strong>3</strong> Se levantará luego un rey valiente, el cual dominará con gran poder y hará su voluntad.</p>
+                    <p class="mb-2"><strong>4</strong> Pero cuando se haya levantado, su reino será quebrantado y repartido hacia los cuatro vientos del cielo; no a sus descendientes, ni según el dominio con que él dominó; porque su reino será arrancado y dado a otros fuera de ellos.</p>
+                    <p class="mb-2"><strong>5</strong> Y el rey del sur se hará fuerte, y uno de sus príncipes; y éste se hará más fuerte que aquél, y dominará; su dominio será un gran dominio.</p>
+                    <p class="mb-2"><strong>6</strong> Al cabo de años harán alianza, y la hija del rey del sur vendrá al rey del norte para hacer la paz. Pero ella no retendrá la fuerza de su brazo, ni permanecerá él, ni su brazo; y será entregada ella y los que la habían traído, y su padre, y el que la sostenía en aquellos tiempos.</p>
+                    <p class="mb-2"><strong>7</strong> Pero de un renuevo de sus raíces se levantará uno sobre su trono, y vendrá con ejército contra el rey del norte, y entrará en la fortaleza, y hará contra ellos a su arbitrio, y prevalecerá.</p>
+                    <p class="mb-2"><strong>8</strong> Y aun los dioses de ellos, sus imágenes fundidas y sus objetos preciosos de plata y oro, los llevará cautivos a Egipto; y por años se mantendrá él alejado del rey del norte.</p>
+                    <p class="mb-2"><strong>9</strong> Así entrará en el reino el rey del sur, y volverá a su tierra.</p>
+                    <p class="mb-2"><strong>10</strong> Mas los hijos de aquél se airarán y reunirán multitud de grandes ejércitos; y vendrá apresuradamente e inundará, y pasará adelante; y volverá y llevará la guerra hasta su fortaleza.</p>
+                    <p class="mb-2"><strong>11</strong> Por lo cual se enfurecerá el rey del sur, y saldrá y peleará contra el rey del norte; y pondrá en campaña gran multitud, y toda aquella multitud caerá en su mano.</p>
+                    <p class="mb-2"><strong>12</strong> Y la multitud será llevada cautiva; y se enorgullecerá su corazón, y derribará a muchos millares; mas no prevalecerá.</p>
+                    <p class="mb-2"><strong>13</strong> Y el rey del norte volverá a reunir una multitud mayor que la primera, y al cabo de algunos años vendrá apresuradamente con gran ejército y con muchas riquezas.</p>
+                    <p class="mb-2"><strong>14</strong> En aquellos tiempos se levantarán muchos contra el rey del sur; y hombres turbulentos de tu pueblo se levantarán para cumplir la visión, pero ellos caerán.</p>
+                    <p class="mb-2"><strong>15</strong> Vendrá, pues, el rey del norte, y levantará baluartes, y tomará la ciudad fuerte; y las fuerzas del sur no podrán sostenerse, ni sus tropas escogidas, ni habrá fuerza para resistir.</p>
+                    <p class="mb-2"><strong>16</strong> Y el que vendrá contra él hará su voluntad, y no habrá quien le resista; y estará en la tierra gloriosa, la cual será consumida por su mano.</p>
+                    <p class="mb-2"><strong>17</strong> Afirmará luego su rostro para venir con la fuerza de todo su reino, y hará con aquél convenios, y le dará una hija de mujeres para destruirla; pero no permanecerá, ni tendrá éxito.</p>
+                    <p class="mb-2"><strong>18</strong> Volverá después su rostro a las costas, y tomará muchas; mas un príncipe le hará cesar su afrenta, y aun hará volver sobre él su propia afrenta.</p>
+                    <p class="mb-2"><strong>19</strong> Luego volverá su rostro a las fortalezas de su tierra; mas tropezará y caerá, y no será hallado.</p>
+                    <p class="mb-2"><strong>20</strong> Y en su lugar se levantará uno que hará pasar un exactor por la gloria del reino; pero en pocos días será quebrantado, no con ira, ni en batalla.</p>
+                    <p class="mb-2"><strong>21</strong> Y en su lugar se levantará un hombre despreciable, al cual no se dará la honra del reino; pero vendrá sin aviso y tomará el reino con halagos.</p>
+                    <p class="mb-2"><strong>22</strong> Y las fuerzas que barrerán delante de él serán del todo <input type="text" class="fill-in-blank" data-chapter="11" data-answer="quebrantadas">; y aun el príncipe del pacto.</p>
+                    <p class="mb-2"><strong>23</strong> Y después de la alianza con él, engañará, y subirá y saldrá vencedor con poca gente.</p>
+                    <p class="mb-2"><strong>24</strong> Estando la provincia en paz y en abundancia, entrará y hará lo que no hicieron sus padres, ni los padres de sus padres; botín, despojos y riquezas repartirá entre ellos, y contra las fortalezas formará sus designios; y esto por un tiempo.</p>
+                    <p class="mb-2"><strong>25</strong> Y levantará sus fuerzas y su corazón contra el rey del sur con gran ejército; y el rey del sur se empeñará en la guerra con un ejército muy grande y poderoso; mas no prevalecerá, porque le harán traición.</p>
+                    <p class="mb-2"><strong>26</strong> Aun los que coman de sus manjares le quebrantarán; y su ejército será destruido, y caerán muchos muertos.</p>
+                    <p class="mb-2"><strong>27</strong> Y en cuanto a estos dos reyes, sus corazones estarán para hacer mal, y en una misma mesa hablarán mentira; mas no servirá de nada, porque el plazo aún no habrá llegado.</p>
+                    <p class="mb-2"><strong>28</strong> Y volverá a su tierra con gran riqueza, y su corazón será contra el pacto santo; hará su voluntad, y volverá a su tierra.</p>
+                    <p class="mb-2"><strong>29</strong> Al tiempo señalado volverá al sur; mas no será la postrera venida como la primera.</p>
+                    <p class="mb-2"><strong>30</strong> Porque vendrán contra él naves de Quitim, y él se desanimará, y volverá, y se enojará contra el pacto santo, y hará su voluntad; volverá, pues, y se entenderá con los que abandonen el santo pacto.</p>
+                    <p class="mb-2"><strong>31</strong> Y se levantarán de su parte tropas que profanarán el santuario y la fortaleza, y quitarán el continuo sacrificio, y pondrán la abominación desoladora.</p>
+                    <p class="mb-2"><strong>32</strong> Con lisonjas seducirá a los violadores del pacto; mas el pueblo que conoce a su Dios se esforzará y actuará.</p>
+                    <p class="mb-2"><strong>33</strong> Y los sabios del pueblo instruirán a muchos; y caerán a espada y a fuego, en cautiverio y despojo, por muchos días.</p>
+                    <p class="mb-2"><strong>34</strong> Y en su caída serán ayudados de pequeño socorro; y muchos se juntarán a ellos con lisonjas.</p>
+                    <p class="mb-2"><strong>35</strong> También algunos de los sabios caerán para ser depurados y limpiados y emblanquecidos, hasta el tiempo determinado; porque aún para esto hay plazo.</p>
+                    <p class="mb-2"><strong>36</strong> Y el rey hará su voluntad, y se ensoberbecerá, y se engrandecerá sobre todo dios; y contra el Dios de los dioses hablará maravillas, y prosperará, hasta que sea consumada la ira; porque lo determinado se cumplirá.</p>
+                    <p class="mb-2"><strong>37</strong> Del Dios de sus padres no hará caso, ni del amor de las mujeres; ni respetará a dios alguno, porque sobre todo se engrandecerá.</p>
+                    <p class="mb-2"><strong>38</strong> Mas honrará en su lugar al dios de las fortalezas, dios que sus padres no conocieron; y lo honrará con oro y plata, con piedras preciosas y con cosas de gran precio.</p>
+                    <p class="mb-2"><strong>39</strong> Con un dios ajeno se hará de las fortalezas más inexpugnables, y colmará de honores a los que le reconozcan, y por precio repartirá la tierra.</p>
+                    <p class="mb-2"><strong>40</strong> Pero al cabo del tiempo el rey del sur contenderá con él; y el rey del norte se levantará contra él como una tempestad, con carros y gente de a caballo, y muchas naves; y entrará por las tierras, e inundará, y pasará.</p>
+                    <p class="mb-2"><strong>41</strong> Entrará a la tierra gloriosa, y muchas provincias caerán; mas éstas escaparán de sus manos: Edom y Moab, y la parte principal de los hijos de Amón.</p>
+                    <p class="mb-2"><strong>42</strong> Extenderá su mano contra las tierras, y no escapará el país de Egipto.</p>
+                    <p class="mb-2"><strong>43</strong> Y se apoderará de los tesoros de oro y plata, y de todas las cosas preciosas de Egipto; y los de Libia y Etiopía le seguirán.</p>
+                    <p class="mb-2"><strong>44</strong> Pero noticias del oriente y del norte lo atemorizarán, y saldrá con gran ira para destruir y matar a muchos.</p>
+                    <p class="mb-2"><strong>45</strong> Y plantará las tiendas de su palacio entre los mares y el monte glorioso y santo; mas llegará a su fin, y no tendrá quien le ayude.</p>
+                `,
+                12: `<p><strong>1</strong> En aquel tiempo se levantará Miguel, el gran príncipe que está de parte de los hijos de tu pueblo; y será tiempo de angustia, cual nunca fue desde que hubo gente hasta entonces; pero en aquel tiempo será librado tu pueblo, todos los que se hallen escritos en el libro.</p>
+                    <p class="mb-2"><strong>2</strong> Y muchos de los que duermen en el polvo de la tierra serán despertados, unos para vida eterna, y otros para vergüenza y confusión perpetua.</p>
+                    <p class="mb-2"><strong>3</strong> Los entendidos resplandecerán como el resplandor del firmamento; y los que enseñan la justicia a la multitud, como las estrellas a perpetua eternidad.</p>
+                    <p class="mb-2"><strong>4</strong> Pero tú, Daniel, cierra las palabras y sella el libro hasta el tiempo del fin. Muchos correrán de aquí para allá, y la ciencia se aumentará.</p>
+                    <p class="mb-2"><strong>5</strong> Y yo Daniel miré, y he aquí otros dos que estaban en pie, el uno a este lado del río, y el otro al otro lado del río.</p>
+                    <p class="mb-2"><strong>6</strong> Y dijo uno al varón vestido de lino, que estaba sobre las aguas del río: ¿Cuándo será el fin de estas maravillas?</p>
+                    <p class="mb-2"><strong>7</strong> Y oí al varón vestido de lino, que estaba sobre las aguas del río, el cual alzó su diestra y su siniestra al cielo, y juró por el que vive por los siglos, que será por tiempo, tiempos, y la mitad de un tiempo. Y cuando se acabe el esparcimiento del poder del pueblo santo, todas estas cosas serán cumplidas.</p>
+                    <p class="mb-2"><strong>8</strong> Y yo oí, mas no entendí. Y dije: Señor mío, ¿cuál será el fin de estas cosas?</p>
+                    <p class="mb-2"><strong>9</strong> Y él dijo: Anda, Daniel, pues estas palabras están cerradas y selladas hasta el tiempo del fin.</p>
+                    <p class="mb-2"><strong>10</strong> Muchos serán limpios, y emblanquecidos y purificados; los impíos procederán impíamente, y ninguno de los impíos entenderá, pero los entendidos comprenderán.</p>
+                    <p class="mb-2"><strong>11</strong> Y desde el tiempo que sea quitado el continuo sacrificio hasta la abominación desoladora, habrá <input type="text" class="fill-in-blank" data-chapter="12" data-answer="mil doscientos noventa días">.</p>
+                    <p class="mb-2"><strong>12</strong> Bienaventurado el que espere, y llegue a <input type="text" class="fill-in-blank" data-chapter="12" data-answer="mil trescientos treinta y cinco días">.</p>
+                    <p class="mb-2"><strong>13</strong> Y tú irás hasta el fin, y reposarás, y te levantarás para recibir tu heredad al fin de los días.</p>
+                `,
+            },
+            observationQA: {
+                1: [
+                    { q: "¿Quiénes fueron llevados cautivos a Babilonia?", a: "Daniel y otros jóvenes de noble linaje de Judá. (Daniel 1:3-4)" },
+                    { q: "¿Qué hizo el rey Nabucodonosor con los jóvenes cautivos?", a: "El rey ordenó que fueran educados en la lengua y la literatura de los caldeos, y que se les proporcionara comida y vino de la mesa del rey. (Daniel 1:5)" },
+                    { q: "¿Qué alimentos y bebidas se les ofrecieron a Daniel y a sus compañeros?", a: "Se les ofreció de la comida y del vino del rey. (Daniel 1:5)" },
+                    { q: "¿Por qué Daniel se negó a comer de la comida del rey?", a: "Daniel no quería contaminarse con la comida y el vino de la mesa del rey, ya que estaba prohibido según la ley de Moisés. (Daniel 1:8)" },
+                    { q: "¿Qué propuso Daniel al jefe de los eunucos?", a: "Daniel propuso una prueba de diez días, en la que él y sus compañeros comerían legumbres y agua en lugar de la comida del rey. (Daniel 1:12)" },
+                    { q: "¿Cuál fue el resultado de la prueba de diez días con la dieta propuesta por Daniel?", a: "Después de los diez días, Daniel y sus compañeros lucían más saludables y mejor alimentados que los jóvenes que comieron de la comida del rey. (Daniel 1:15)" },
+                    { q: "¿Qué habilidades sobresalientes tenían Daniel y sus compañeros?", a: "Daniel y sus compañeros tenían habilidades en todas las ciencias y sabiduría, y eran entendidos en todo sueño y visión. (Daniel 1:17)" },
+                    { q: "¿Cuánto tiempo duró la educación y preparación de los jóvenes cautivos?", a: "La educación y preparación de los jóvenes cautivos duró tres años. (Daniel 1:5)" },
+                    { q: "¿Qué conocimientos y sabiduría recibieron de Dios?", a: "Dios les dio conocimiento e inteligencia en todas las letras y ciencias, y Daniel tuvo entendimiento en toda visión y sueño. (Daniel 1:17)" },
+                    { q: "¿Cómo se compararon Daniel y sus compañeros con los demás sabios de Babilonia?", a: "Después de completar su educación, Daniel y sus compañeros fueron encontrados diez veces mejores que todos los magos y astrólogos en todo el reino. (Daniel 1:20)" }
+                ],
+                2: [
+                    { q: "¿Qué sueño tuvo el rey Nabucodonosor?", a: "El rey Nabucodonosor tuvo un sueño perturbador (Daniel 2:1)." },
+                    { q: "¿Cuál fue la reacción del rey cuando despertó del sueño?", a: "El rey se levantó de su cama y quedó muy angustiado por el sueño (Daniel 2:3)." },
+                    { q: "¿Qué exigencia hizo el rey a sus sabios y astrólogos?", a: "El rey exigió a sus sabios y astrólogos que le revelaran el sueño y su interpretación (Daniel 2:2)." },
+                    { q: "¿Cómo reaccionaron los sabios ante la exigencia del rey?", a: "Los sabios y astrólogos no pudieron cumplir con la exigencia del rey y se enfrentaron a la ira del rey (Daniel 2:4-12)." },
+                    { q: "¿Qué hizo Daniel cuando supo del decreto del rey?", a: "Daniel buscó al rey para pedirle tiempo y prometió revelarle el sueño y su interpretación (Daniel 2:16-18)." },
+                    { q: "¿A quién buscó Daniel para revelarle el sueño y su interpretación?", a: "Daniel buscó a sus amigos, Hananías, Misael y Azarías, para unirse en oración y buscar la misericordia de Dios en cuanto al misterio del sueño (Daniel 2:17-18)." },
+                    { q: "¿Cómo reaccionaron los amigos de Daniel ante el decreto del rey?", a: "Los amigos de Daniel también enfrentaron el decreto del rey y buscaron la misericordia de Dios (Daniel 2:17-18)." },
+                    { q: "¿Qué reveló Dios a Daniel en relación al sueño del rey?", a: "Dios reveló el sueño y su interpretación a Daniel en una visión durante la noche (Daniel 2:19)." },
+                    { q: "¿Cuál fue la reacción de Daniel al conocer el sueño y su interpretación?", a: "Daniel alabó y agradeció a Dios por revelarle el misterio del sueño al despertar (Daniel 2:19-23)." },
+                    { q: "¿Cómo se presentó Daniel ante el rey y qué le reveló?", a: "Daniel se presentó ante el rey y le reveló el sueño del rey y su interpretación, demostrando así la sabiduría divina (Daniel 2:24-45)." }
+                ],
+                3: [
+                    { q: "¿Qué decreto emitió el rey Nabucodonosor en relación con la estatua de oro que había levantado?", a: "El rey Nabucodonosor emitió un decreto ordenando que todos los pueblos y naciones se postraran y adoraran la estatua de oro que había levantado. (Daniel 3:1)" },
+                    { q: "¿Cuáles eran las dimensiones y la apariencia de la estatua?", a: "La estatua tenía una altura de sesenta codos y un ancho de seis codos. Era completamente de oro. (Daniel 3:1)" },
+                    { q: "¿Cuándo se ordenó que se tocaran los instrumentos musicales y que todos se postraran y adoraran la estatua?", a: "Se ordenó que se tocaran todos los instrumentos musicales y que todos se postraran y adoraran la estatua cuando se escuchara el sonido de la música. (Daniel 3:5-7)" },
+                    { q: "¿Quiénes fueron acusados de no postrarse y adorar la estatua?", a: "Sadrac, Mesac y Abed-nego fueron acusados de no postrarse y adorar la estatua. (Daniel 3:8-12)" },
+                    { q: "¿Cómo respondieron los acusados a las acusaciones delante del rey?", a: "Los acusados respondieron al rey diciendo que no tenían necesidad de responderle en este asunto, ya que ellos no adorarían a ningún dios excepto al Dios de Israel. (Daniel 3:16-18)" },
+                    { q: "¿Cuál fue la reacción del rey Nabucodonosor al escuchar que los acusados no se postraron ante la estatua?", a: "El rey Nabucodonosor se enfureció y mandó calentar el horno siete veces más de lo normal. (Daniel 3:19)" },
+                    { q: "¿Qué castigo decretó el rey Nabucodonosor para aquellos que no adoraran la estatua?", a: "El rey decretó que aquellos que no adoraran la estatua serían arrojados al horno de fuego ardiente. (Daniel 3:20)" },
+                    { q: "¿Qué fue lo que sucedió con los tres hebreos, Sadrac, Mesac y Abednego, cuando fueron arrojados al horno de fuego?", a: "Cuando Sadrac, Mesac y Abednego fueron arrojados al horno de fuego, fueron protegidos por un ángel y no sufrieron ningún daño. (Daniel 3:23-27)" },
+                    { q: "¿Qué hizo el rey Nabucodonosor después de presenciar el milagro en el horno de fuego?", a: "Después de presenciar el milagro en el horno de fuego, el rey Nabucodonosor alabó al Dios de Sadrac, Mesac y Abednego y emitió un decreto para que nadie hablara en contra de su Dios. (Daniel 3:28-29)" },
+                    { q: "¿Cuál fue la promoción y el reconocimiento que recibieron Sadrac, Mesac y Abednego después del incidente?", a: "Sadrac, Mesac y Abednego fueron promovidos en la provincia de Babilonia y recibieron reconocimiento por su fidelidad a Dios. (Daniel 3:30)" }
+                ],
+                4: [
+                    { q: "¿Quién es el autor del capítulo 4 de Daniel?", a: "El autor del capítulo 4 de Daniel es el rey Nabucodonosor." },
+                    { q: "¿Qué mensaje recibe el rey Nabucodonosor en un sueño?", a: "El rey Nabucodonosor recibe un mensaje en un sueño que le revela su caída de poder y su posterior restauración por parte de Dios." },
+                    { q: "¿Qué le sucede al rey Nabucodonosor después de tener el sueño?", a: "Después de tener el sueño, el rey Nabucodonosor se siente perturbado y busca la interpretación del sueño." },
+                    { q: "¿Cuál es el consejo de Daniel al rey respecto a su sueño?", a: "El consejo de Daniel al rey es que se arrepienta de sus pecados y practique la justicia para evitar la venida del juicio divino." },
+                    { q: "¿Qué lección aprende el rey Nabucodonosor a través de su experiencia?", a: "El rey Nabucodonosor aprende la lección de la soberanía de Dios y la importancia de reconocer y honrar a Dios como el único gobernante supremo." },
+                    { q: "¿Qué transformación experimenta el rey Nabucodonosor al final del capítulo?", a: "Al final del capítulo, el rey Nabucodonosor experimenta una transformación personal y reconoce la grandeza de Dios, exaltándolo y alabándolo." },
+                    { q: "¿Cuál es el propósito del testimonio de Nabucodonosor en este capítulo?", a: "El propósito del testimonio de Nabucodonosor en este capítulo es mostrar la obra redentora y transformadora de Dios en la vida de una persona orgullosa y poderosa." },
+                    { q: "¿Qué reacciones tienen las personas al escuchar el testimonio del rey Nabucodonosor?", a: "Las personas quedan asombradas y maravilladas al escuchar el testimonio del rey Nabucodonosor, reconociendo la grandeza de Dios." },
+                    { q: "¿Qué importancia tiene el mensaje de humildad y adoración a Dios en este capítulo?", a: "El mensaje de humildad y adoración a Dios en este capítulo resalta la importancia de reconocer la soberanía divina y vivir en sumisión y reverencia hacia Él." },
+                    { q: "¿Cómo podemos aplicar las lecciones aprendidas del capítulo 4 de Daniel en nuestra vida?", a: "Podemos aplicar las lecciones aprendidas del capítulo 4 de Daniel al reconocer nuestra propia tendencia al orgullo, humillarnos ante Dios, buscar su perdón y vivir en adoración y sumisión a Él." }
+                ],
+                5: [
+                    { q: "¿Quién es el protagonista principal del capítulo 5 de Daniel?", a: "El rey Belsasar y Daniel. (Daniel 5:1, 13)" },
+                    { q: "¿Cuál es el evento principal que ocurre en este capítulo?", a: "Durante el banquete, aparece una mano que escribe en la pared del palacio. (Daniel 5:5-6)" },
+                    { q: "¿Qué significa la escritura en la pared y quién la interpreta?", a: "El mensaje escrito en la pared es 'MENE, MENE, TEKEL, UPARSIN', y su significado es interpretado por Daniel como un juicio de Dios sobre el rey y su reino, anunciando su caída y repartición. (Daniel 5:25-28)" },
+                    { q: "¿Cuál es la reacción del rey y de los presentes ante la escritura en la pared y su interpretación?", a: "El rey se llena de temor y reconoce la sabiduría de Daniel, dándole honor y recompensa por su interpretación. (Daniel 5:9-12, 29)" },
+                    { q: "¿Quién es el personaje clave que desempeña un papel importante en este capítulo?", a: "La reina madre interviene y sugiere que Daniel sea llamado para interpretar la escritura en la pared. (Daniel 5:10-12)" },
+                    { q: "¿Cuál es el destino del rey Belsasar al final del capítulo?", a: "Esa misma noche, Belsasar es asesinado y su reino es dado a los medos y persas. (Daniel 5:30-31)" },
+                    { q: "¿Qué lecciones podemos aprender de la caída del rey Belsasar y la interpretación de la escritura en la pared?", a: "Daniel revela que el rey Belsasar ha sido pesado en la balanza y encontrado falto, y que su reino será dividido y dado a los medos y persas. (Daniel 5:25-28)" },
+                    { q: "¿Qué papel juega Daniel en este capítulo y cuál es su testimonio?", a: "Belsasar muestra falta de temor y respeto hacia Dios al profanar los utensilios del templo, mientras que Daniel muestra una actitud de humildad y reverencia hacia Dios al interpretar la escritura en la pared. (Daniel 5:2-4, 29)" },
+                    { q: "¿Cómo podemos aplicar las enseñanzas de este capítulo en nuestra vida diaria?", a: "Como resultado de su interpretación, Daniel es vestido con ropas de púrpura, se le pone un collar de oro al cuello y se le nombra el tercer gobernante del reino. (Daniel 5:29)" },
+                    { q: "El capítulo termina con la caída y muerte de Belsasar, y la toma del reino por los medos y persas.", a: "(Daniel 5:30-31)" }
+                ],
+                6: [
+                    { q: "¿Cuál es la posición y responsabilidad de Daniel en el reino?", a: "Daniel era uno de los tres gobernadores sobre los cuales el rey Darío había puesto a 120 sátrapas para que gobernasen el reino. (Daniel 6:2)" },
+                    { q: "¿Qué virtudes se destacan en la vida de Daniel?", a: "Daniel era un hombre íntegro, fiel, sin ninguna falta ni corrupción. Además, destacaba por su espíritu excelente. (Daniel 6:3)" },
+                    { q: "¿Cuál es el plan tramado por los gobernadores y sátrapas contra Daniel?", a: "Los gobernadores y sátrapas trataron de encontrar alguna falta en Daniel en cuanto a los asuntos del reino, pero no pudieron hallar ninguna ocasión o falta alguna, ya que él era fiel en su servicio. (Daniel 6:4)" },
+                    { q: "¿Cuál es la reacción de Daniel ante el edicto del rey?", a: "A pesar del edicto del rey que prohibía hacer petición a ningún dios u hombre que no fuese el rey por 30 días, Daniel continuó orando tres veces al día en su casa, abriendo sus ventanas hacia Jerusalén. (Daniel 6:10-11)" },
+                    { q: "¿Qué motiva al rey a intentar salvar a Daniel?", a: "El rey Darío se entristeció grandemente cuando se dio cuenta de que había sido engañado y manipulado por los gobernadores y sátrapas para firmar el edicto contra Daniel. Hizo todo lo posible por liberar a Daniel, pero se vio obligado a cumplir con su propia ley. (Daniel 6:14-15)" },
+                    { q: "¿Cuál es el castigo de los conspiradores en el foso de los leones?", a: "Los conspiradores, junto con sus familias, fueron arrojados al foso de los leones. Antes de tocar el suelo, los leones los dominaron y quebraron todos sus huesos. (Daniel 6:24)" },
+                    { q: "¿Cuál es el mensaje del rey al pueblo después del milagro de Daniel?", a: "El rey Darío envió un decreto a todos los pueblos, naciones y lenguas proclamando la grandeza de Dios y ordenando que se temiese y reverenciase a Daniel y a su Dios, porque Él es el Dios viviente y permanece para siempre. (Daniel 6:25-27)" },
+                    { q: "¿Cómo prospera Daniel en el reinado de Darío?", a: "Daniel prosperó en el reinado de Darío y en el reinado de Ciro el persa. (Daniel 6:28)" },
+                    { q: "¿Cuál es el legado de Daniel en el reino de Babilonia y Persia?", a: "Daniel continuó siendo prosperado y tuvo éxito en el reinado de varios reyes debido a su fidelidad a Dios y a su sabiduría en los asuntos del reino. (Daniel 6:28)" },
+                    { q: "¿Qué lecciones podemos aprender de la vida y la experiencia de Daniel?", a: "Algunas lecciones que podemos aprender de la vida y experiencia de Daniel incluyen la importancia de la integridad, la fidelidad a Dios a pesar de las circunstancias, la confianza en Dios en medio de la adversidad y el testimonio impactante que puede tener una vida consagrada a Dios en un entorno secular." }
+                ],
+                7: [
+                    { q: "¿Qué vio Daniel en una visión durante la noche?", a: "Daniel vio en una visión durante la noche 'cuatro bestias grandes, diferentes la una de la otra' (Daniel 7:3)." },
+                    { q: "¿Cuál era la apariencia de los cuatro vientos del cielo?", a: "Los cuatro vientos del cielo 'combatían en el gran mar' (Daniel 7:2)." },
+                    { q: "¿Cuántas bestias subieron del mar en la visión de Daniel?", a: "Subieron del mar 'cuatro bestias grandes' (Daniel 7:3)." },
+                    { q: "¿Cuál era la apariencia de la primera bestia y qué la distinguía?", a: "La primera bestia era 'como un león' y tenía 'alas de águila' (Daniel 7:4)." },
+                    { q: "¿Qué sucedió con las alas de la primera bestia?", a: "A la primera bestia 'le arrancaron las alas' (Daniel 7:4)." },
+                    { q: "¿Qué aspecto tenía la segunda bestia y qué tenía en su boca?", a: "La segunda bestia tenía 'apariencia de oso' y tenía 'tres costillas en la boca' (Daniel 7:5)." },
+                    { q: "¿Qué sucedió con la tercera bestia y qué tenía en su espalda?", a: "La tercera bestia era 'diferente de todas las otras' y tenía 'diez cuernos' (Daniel 7:7)." },
+                    { q: "¿Cuál era el aspecto de la cuarta bestia y cómo se diferenciaba de las anteriores?", a: "La cuarta bestia era 'espantosa y terrible, y en gran manera fuerte' y tenía 'dientes de hierro' (Daniel 7:7)." },
+                    { q: "¿Cuántos cuernos tenía la cuarta bestia y qué ocurrió con uno de ellos?", a: "La cuarta bestia tenía 'diez cuernos' y 'otro cuerno pequeño' salió entre ellos (Daniel 7:7-8)." },
+                    { q: "¿Qué sucedió después de que aparecieron los cuernos en la visión de Daniel?", a: "Después de que aparecieron los cuernos, Daniel vio en la visión que 'se puso un tribunal y se abrieron los libros' (Daniel 7:10)." }
+                ],
+                8: [
+                    { q: "¿Qué vio Daniel en su visión?", a: "Daniel vio una visión de un carnero y un macho cabrío. (Daniel 8:1)" },
+                    { q: "¿Dónde tuvo lugar la visión?", a: "La visión tuvo lugar junto al río Ulai. (Daniel 8:2)" },
+                    { q: "¿Qué vio Daniel alzando los ojos?", a: "Alzando los ojos, Daniel vio a un carnero que tenía dos cuernos. (Daniel 8:3)" },
+                    { q: "¿Cuántos cuernos tenía el carnero que vio Daniel?", a: "El carnero tenía dos cuernos. (Daniel 8:3)" },
+                    { q: "¿Cuál era el cuerno que creció más tarde y destacó entre los otros?", a: "El cuerno que creció más tarde y destacó entre los otros era más grande que los demás cuernos. (Daniel 8:3)" },
+                    { q: "¿Qué vio Daniel después del carnero?", a: "Después del carnero, Daniel vio a un macho cabrío que venía de occidente. (Daniel 8:5)" },
+                    { q: "¿Cómo se describe la apariencia de este macho cabrío?", a: "El macho cabrío tenía un cuerno notable entre sus ojos. (Daniel 8:5)" },
+                    { q: "¿Qué hizo el macho cabrío al acercarse al carnero?", a: "El macho cabrío embistió al carnero con furia y lo derribó. (Daniel 8:6)" },
+                    { q: "¿Qué ocurrió cuando el macho cabrío se hizo fuerte?", a: "Cuando el macho cabrío se hizo fuerte, el gran cuerno fue quebrado y en su lugar surgieron cuatro cuernos notables hacia los cuatro vientos del cielo. (Daniel 8:8)" },
+                    { q: "¿Qué vio Daniel en lugar del gran cuerno cuando se rompió?", a: "Daniel vio que delante de él surgió otro cuerno pequeño, que creció mucho y se extendió hacia el sur, el oriente y la tierra gloriosa. (Daniel 8:9)" }
+                ],
+                9: [
+                    { q: "¿Qué hizo Daniel cuando entendió la profecía de Jeremías sobre la duración del cautiverio de Jerusalén?", a: "Daniel entendió la profecía de Jeremías sobre la duración del cautiverio de Jerusalén, y entendió que se acercaba su fin. (Daniel 9:2)" },
+                    { q: "¿Cómo se dirigió Daniel a Dios en su oración?", a: "Daniel se dirigió a Dios en su oración llamándolo 'Señor, Dios grande y temible' (Daniel 9:4)" },
+                    { q: "¿Cuál fue el propósito de la oración de Daniel?", a: "El propósito de la oración de Daniel era buscar el perdón de Dios y buscar su misericordia hacia el pueblo de Israel. (Daniel 9:5-19)" },
+                    { q: "¿Cuánto tiempo había pasado desde el comienzo del cautiverio de Jerusalén hasta el momento de la oración de Daniel?", a: "Desde el comienzo del cautiverio de Jerusalén hasta el momento de la oración de Daniel habían pasado setenta años. (Daniel 9:2)" },
+                    { q: "¿Qué reconocimiento hizo Daniel acerca de los pecados y rebeliones del pueblo de Israel?", a: "Daniel reconoció los pecados y rebeliones del pueblo de Israel, admitiendo que habían sido desobedientes a la ley de Dios. (Daniel 9:5-11)" },
+                    { q: "¿Cuál fue la petición específica de Daniel a Dios en su oración?", a: "La petición específica de Daniel a Dios en su oración fue que perdonara los pecados del pueblo de Israel y restaurara Jerusalén y el templo. (Daniel 9:16-19)" },
+                    { q: "¿Qué expresión utilizó Daniel para describir a Dios y su fidelidad?", a: "Daniel utilizó la expresión 'Dios grande y temible' para describir a Dios y su fidelidad. (Daniel 9:4)" },
+                    { q: "¿Cuál fue la base de la esperanza de Daniel en el cumplimiento de las promesas de Dios?", a: "La base de la esperanza de Daniel en el cumplimiento de las promesas de Dios fue la justicia de Dios y su fidelidad a su pacto con el pueblo de Israel. (Daniel 9:4-15)" },
+                    { q: "¿Qué revelación recibió Daniel mientras oraba?", a: "Daniel recibió la revelación de que setenta semanas están determinadas sobre el pueblo de Israel y sobre la santa ciudad para terminar la transgresión, poner fin al pecado y expiar la iniquidad, y traer justicia eterna. (Daniel 9:24-27)" },
+                    { q: "¿Cuál fue la reacción de Daniel ante la revelación que recibió?", a: "La reacción de Daniel ante la revelación que recibió fue asombro y confusión. (Daniel 9:27)" }
+                ],
+                10: [
+                    { q: "¿Quién recibió una visión en el tercer año del reinado del rey Ciro de Persia?", a: "En el tercer año de Ciro, rey de Persia, fue revelada una palabra a Daniel (Daniel 10:1)." },
+                    { q: "¿Cuál fue el estado emocional de Daniel antes de recibir la visión?", a: "Daniel estaba afligido y entristecido durante tres semanas (Daniel 10:2-3)." },
+                    { q: "¿Cuál fue la duración del ayuno que Daniel observó?", a: "Daniel observó un ayuno completo de alimentos deseables y no bebió vino durante tres semanas (Daniel 10:3)." },
+                    { q: "¿En qué fecha específica del año recibió Daniel la visión?", a: "La visión fue recibida el vigésimo cuarto día del primer mes (Daniel 10:4)." },
+                    { q: "¿Cómo se describe la apariencia del hombre vestido de lino en la visión de Daniel?", a: "El hombre vestido de lino tenía cintura ceñida con oro de Ufaz, su cuerpo era como el de un jaspe, su rostro brillaba como un relámpago, sus ojos eran como antorchas de fuego y sus brazos y pies parecían bronce pulido (Daniel 10:5-6)." },
+                    { q: "¿Cómo reaccionaron los hombres que estaban con Daniel cuando vieron la visión?", a: "Los hombres que estaban con Daniel no vieron la visión, pero sintieron un gran temor y huyeron para esconderse (Daniel 10:7-8)." },
+                    { q: "¿Qué efecto tuvo la visión en Daniel físicamente?", a: "La visión debilitó a Daniel y lo dejó sin fuerzas, por lo que cayó en un profundo sueño con su rostro en tierra (Daniel 10:9)." },
+                    { q: "¿Qué mensaje recibió Daniel a través de la voz de la visión?", a: "La voz de la visión le habló a Daniel, quien cayó con el rostro en tierra en un sueño profundo, y le reveló que había sido enviado por causa de las palabras de entendimiento que Daniel había buscado (Daniel 10:10-12)." },
+                    { q: "¿Cuál fue la reacción de Daniel después de escuchar el mensaje de la visión?", a: "Daniel se sintió muy débil y tembloroso después de escuchar la voz de la visión, pero pudo hablar y le expresó su angustia al hombre vestido de lino (Daniel 10:15-17)." },
+                    { q: "¿Qué sucedió después de la visita del hombre vestido de lino?", a: "Después de la visita del hombre vestido de lino, Daniel fue fortalecido y animado, y continuó sirviendo a su propósito (Daniel 10:18-21)." }
+                ],
+                11: [
+                    { q: "¿Qué revelaciones se le hicieron a Daniel en el primer año de Darío el medo?", a: "En el primer año de Darío el medo, se le hicieron revelaciones a Daniel. (Daniel 11:1)" },
+                    { q: "¿Cuáles son los cuatro reyes persas que surgirán después de Darío?", a: "Después de Darío, surgirán cuatro reyes persas. (Daniel 11:2)" },
+                    { q: "¿Qué sucederá cuando se levante el rey poderoso?", a: "Cuando se levante el rey poderoso, su reino se dividirá hacia los cuatro vientos del cielo y no será para sus descendientes. (Daniel 11:4)" },
+                    { q: "¿Qué rey surgirá con gran dominio y hará lo que quiera?", a: "El rey del norte surgirá con gran dominio y hará lo que quiera. (Daniel 11:3)" },
+                    { q: "¿Qué sucederá cuando se levante el rey del sur?", a: "El rey del sur se levantará con gran poderío y luchará contra el rey del norte. (Daniel 11:5)" },
+                    { q: "¿Qué hará el rey del norte en respuesta a los ataques del rey del sur?", a: "El rey del norte responderá a los ataques del rey del sur con un gran ejército y tomará el control de sus tierras. (Daniel 11:6-7)" },
+                    { q: "¿Qué rey se levantará con gran ira y peleará contra el rey del norte?", a: "Un rey se levantará con gran ira y peleará contra el rey del norte. (Daniel 11:10)" },
+                    { q: "¿Cuál será el resultado de la guerra entre el rey del norte y el rey del sur?", a: "La guerra entre el rey del norte y el rey del sur resultará en la derrota del rey del sur. (Daniel 11:11)" },
+                    { q: "¿Qué hará el rey del norte después de su victoria sobre el rey del sur?", a: "El rey del norte actuará con soberbia y exaltará su corazón contra el pacto santo. (Daniel 11:28)" },
+                    { q: "¿Qué sucederá cuando el rey del norte vuelva a su tierra con gran riqueza?", a: "Cuando el rey del norte regrese a su tierra con gran riqueza, su corazón se enojará contra el pacto santo y tomará acciones en su contra. (Daniel 11:28)" }
+                ],
+                12: [
+                    { q: "¿Qué ocurrirá en ese tiempo mencionado al inicio del capítulo?", a: "Versículo 1: 'En aquel tiempo se levantará Miguel, el gran príncipe que está de parte de los hijos de tu pueblo' (Daniel 12:1a)." },
+                    { q: "¿Quién será librado en ese tiempo?", a: "Versículo 2: 'Y muchos de los que duermen en el polvo de la tierra serán despertados, unos para vida eterna, y otros para vergüenza y confusión perpetua' (Daniel 12:2)." },
+                    { q: "¿Qué sucederá con muchos de los que duermen en el polvo de la tierra?", a: "Versículo 5: 'Entonces yo Daniel miré, y he aquí otros dos que estaban en pie, el uno a este lado del río, y el otro al otro lado del río' (Daniel 12:5)." },
+                    { q: "¿Cuál será la recompensa de los sabios que enseñaron la justicia a muchos?", a: "Versículo 7: 'Y yo oí al varón vestido de lino, que estaba sobre las aguas del río, el cual alzó su diestra y su siniestra al cielo, y juró por el que vive por los siglos, que será por tiempo, tiempos, y la mitad de un tiempo' (Daniel 12:7)." },
+                    { q: "¿Cuál será la actitud de Daniel al escuchar estas revelaciones?", a: "Versículo 13: 'Y tú irás hasta el fin, y reposarás, y te levantarás para recibir tu heredad al fin de los días' (Daniel 12:13)." },
+                    { q: "¿Cuánto tiempo durará la aflicción mencionada?", a: "Versículo 4: 'Pero tú, Daniel, cierra las palabras y sella el libro hasta el tiempo del fin. Muchos correrán de aquí para allá, y la ciencia se aumentará' (Daniel 12:4)." },
+                    { q: "¿Cuál es la finalidad de estas palabras selladas?", a: "Versículo 6: 'Y dijo uno al varón vestido de lino, que estaba sobre las aguas del río: ¿Cuándo será el fin de estas maravillas?' (Daniel 12:6)." },
+                    { q: "¿Qué pregunta hace Daniel al respecto?", a: "Versículo 8: 'Yo oí, pero no entendí. Y dije: Señor mío, ¿cuál será el fin de estas cosas?' (Daniel 12:8)." },
+                    { q: "¿Cuál es la respuesta que se le da a Daniel?", a: "Versículo 9: 'Anda, Daniel, pues estas palabras están cerradas y selladas hasta el tiempo del fin' (Daniel 12:9)." },
+                    { q: "¿Cuál es la última declaración en el capítulo?", a: "Versículo 10: 'Muchos serán limpios, y emblanquecidos y purificados; los impíos procederán impíamente, y ninguno de los impíos entenderá, pero los entendidos comprenderán' (Daniel 12:10)." }
+                ]
+            },
+            quizzes: {
+                1: [
+                    { q: "¿Cuántos días pidió Daniel ser probado comiendo legumbres y bebiendo agua?", o: ["7 días", "10 días", "3 días", "30 días"], a: 1 },
+                    { q: "En la evaluación del rey, ¿cuántas veces más sabios fueron Daniel y sus amigos que los magos de Babilonia?", o: ["2 veces", "5 veces", "10 veces", "100 veces"], a: 2 },
+                    { q: "¿De qué tribu eran Daniel y sus 3 amigos?", o: ["Leví", "Benjamín", "Efraín", "Judá"], a: 3 },
+                    { q: "¿Cuál era el nombre babilónico de Daniel?", o: ["Sadrac", "Mesac", "Abed-nego", "Beltsasar"], a: 3 }
+                ],
+                2: [
+                    { q: "¿Qué hizo el rey Nabucodonosor cuando despertó del sueño?", o: ["Se alegró", "Se angustió mucho", "Lo olvidó", "Consultó a Daniel de inmediato"], a: 1 },
+                    { q: "¿Quién reveló el sueño y su interpretación al rey?", o: ["Los magos", "Los astrólogos", "Daniel", "El jefe de los eunucos"], a: 2 }
+                ],
+                3: [
+                    { q: "¿De qué material era la estatua que Nabucodonosor levantó?", o: ["Plata", "Bronce", "Oro", "Hierro"], a: 2 },
+                    { q: "¿Cuántas veces más se calentó el horno para Sadrac, Mesac y Abed-nego?", o: ["3 veces", "5 veces", "7 veces", "10 veces"], a: 2 }
+                ],
+                4: [
+                    { q: "¿Quién es el autor del capítulo 4 de Daniel?", o: ["Daniel", "Un ángel", "Nabucodonosor", "Jeremías"], a: 2 },
+                    { q: "¿Cuánto tiempo pasó Nabucodonosor viviendo como una bestia?", o: ["3 años", "5 años", "7 años", "12 meses"], a: 2 }
+                ],
+                5: [
+                    { q: "¿Qué apareció escribiendo en la pared durante el banquete de Belsasar?", o: ["Un ángel", "La mano de un hombre", "Daniel", "Un espíritu"], a: 1 },
+                    { q: "¿Cuál fue la primera palabra escrita en la pared?", o: ["TEKEL", "UPARSIN", "MENE", "PERES"], a: 2 }
+                ],
+                6: [
+                    { q: "¿Cuántos sátrapas constituyó Darío sobre el reino?", o: ["3", "12", "70", "120"], a: 3 },
+                    { q: "¿Cuántas veces al día oraba Daniel?", o: ["Una vez", "Dos veces", "Tres veces", "Cuatro veces"], a: 2 }
+                ],
+                7: [
+                    { q: "¿Cuántas bestias grandes subieron del mar en la visión de Daniel?", o: ["Dos", "Tres", "Cuatro", "Siete"], a: 2 },
+                    { q: "¿La primera bestia era como un...?", o: ["Oso", "Leopardo", "León", "Dragón"], a: 2 }
+                ],
+                8: [
+                    { q: "¿Qué animal tenía dos cuernos en la visión de Daniel?", o: ["Macho cabrío", "León", "Carnero", "Oso"], a: 2 },
+                    { q: "¿Cuántos cuernos notables surgieron en lugar del gran cuerno del macho cabrío?", o: ["Dos", "Tres", "Cuatro", "Diez"], a: 2 }
+                ],
+                9: [
+                    { q: "¿Cuántos años de desolación de Jerusalén entendió Daniel por Jeremías?", o: ["40 años", "50 años", "70 años", "100 años"], a: 2 },
+                    { q: "¿Quién se le apareció a Daniel mientras oraba en el capítulo 9?", o: ["Miguel", "El Anciano de días", "Gabriel", "Otro profeta"], a: 2 }
+                ],
+                10: [
+                    { q: "¿Cuánto tiempo estuvo Daniel afligido antes de recibir la visión en el capítulo 10?", o: ["7 días", "10 días", "3 semanas", "Un mes"], a: 2 },
+                    { q: "¿Quién ayudó a Daniel contra el príncipe de Persia?", o: ["Gabriel", "El Anciano de días", "Miguel", "Ciro"], a: 2 }
+                ],
+                11: [
+                    { q: "¿Cuántos reyes persas surgirán después de Darío según la profecía?", o: ["Uno", "Dos", "Tres", "Cuatro"], a: 3 },
+                    { q: "¿Qué se levantará de parte del rey del norte que profanará el santuario?", o: ["Un ejército", "Tropas", "Un cuerno pequeño", "Un rey valiente"], a: 1 }
+                ],
+                12: [
+                    { q: "¿Quién se levantará en el tiempo de angustia según el capítulo 12?", o: ["Gabriel", "El Anciano de días", "Miguel", "El Mesías"], a: 2 },
+                    { q: "¿Qué sucederá con muchos de los que duermen en el polvo de la tierra?", o: ["Serán olvidados", "Serán despertados", "Serán juzgados", "Serán sanados"], a: 1 }
+                ]
+            },
+            generalQuiz: [
+                { q: "1. ¿Cuántos días pidió Daniel ser probado comiendo legumbres y bebiendo agua?", a: "10 días. Dn. 1:12" },
+                { q: "2. En la evaluación del rey Nabucodonosor, ¿Daniel y sus amigos fueron cuántas veces más sabios que todos los magos y adivinos de Babilonia?", a: "10 veces Dn. 01:20" },
+                { q: "3. ¿Cómo se llama el jefe de los eunucos de Babilonia que recibió a David y sus 3 amigos?", a: "Aspenaz Dn. 01: 3" },
+                { q: "4. ¿Cuántos años debían instruirse los jóvenes de Israel antes de presentarse al rey?", a: "3 años Dn. 01: 5" },
+                { q: "5. ¿De qué tribu eran Daniel y sus 3 amigos?", a: "Judá Dn. 01: 6" },
+                { q: "6. ¿Quién dio los nombres babilónicos a Daniel y sus 3 amigos?", a: "Aspenaz Dn. 01: 7" },
+                { q: "7. ¿En qué año del reinado de Nabucodonosor soñó con la estatua?", a: "Segundo año Dn. 02: 1" },
+                { q: "8. ¿Cómo se llamaba el jefe de guardia del rey Nabucodonosor?", a: "Arioc Dn. 02:14" },
+                { q: "9. En la estatua de los sueños de Nabucodonosor, ¿de qué material estaba hecho el vientre y los muslos de la estatua?", a: "Bronce. Dn. 02: 32-33" },
+                { q: "10. En la visión de la estatua de Nabucodonosor, ¿en qué se convirtió en la piedra que destruyó la estatua?", a: "Una montaña. Dn. 02:35" },
+                { q: "11. ¿En qué dos cargos fue colocado Daniel por Nabucodonosor después de revelar el significado del sueño de la estatua?", a: "Gobernador de Babilonia y jefe de todos los sabios. Dan. 02:48" },
+                { q: "12. ¿De cuántos materiales era formada la estatua que Nabucodonosor construyó?", a: "1. Dn. 03: 1" },
+                { q: "13. ¿Dónde levantó Nabucodonosor la estatua de oro que construyó?", a: "Campo de Dura. Dn. 03: 1" },
+                { q: "14. ¿Cuántas veces más se calentó el horno para arrojar a los amigos de Daniel?", a: "7 veces. Dn. 03:19" },
+                { q: "15. ¿Qué capítulo del libro de Daniel fue escrito por Nabucodonosor?", a: "Capítulo 4. Dn. 04:02" },
+                { q: "16. ¿Durante cuántos años fue alejado Nabucodonosor de los hombres y vivió con animales?", a: "7 años. Dn. 04:23" },
+                { q: "17. Nabucodonosor soñó con un árbol que significaba que sería quitado de los hombres y viviría con animales. ¿Cuántos meses después del sueño se hizo realidad la profecía?", a: "12 meses. Dn. 04:29" },
+                { q: "18. ¿Con cuántos años tenía Darío, el medo, tomó el reino de Babilonia?", a: "62 años. Dn. 05:31" },
+                { q: "19. ¿Qué tres premios ofreció Belsasar a cualquiera que revelara el significado de las palabras escritas en la pared?", a: "Vestido de púrpura, collar de oro alrededor del cuello y tercero en el reino. Dn. 05: 7" },
+                { q: "20. ¿Cuántos sátrapas y gobernadores había en el reinado de Darío?", a: "120 sátrapas y tres gobernadores. Dn. 06: 01-02" },
+                { q: "21. En el libro de Daniel, el rey Darío emitió un decreto de que todos deberían adorarlo y rezarle solo a él ¿por cuántos días?", a: "30 días. Dan 06: 7" },
+                { q: "22. En la visión de Daniel en el capítulo 7, ¿cuántas costillas tenía el oso en la boca?", a: "3 costillas. Dn. 07:05" },
+                { q: "23. ¿Quién reinaba cuando Daniel vio la visión de los cuatro animales, el carnero y el macho cabrío?", a: "Belsasar. Dn. 07: 1; 8: 1" },
+                { q: "24. ¿De qué material eran los dientes y las uñas del terrible y asombroso animal, el cuarto animal en el sueño de Daniel?", a: "Dientes de hierro y uñas de bronce Dn. 07:19" },
+                { q: "25. En una visión de la noche, Daniel vio cuatro grandes animales que se levantaban del mar. Al final de la visión, ¿cuántas cabezas y alas tenían los cuatro animales juntos?", a: "7 cabezas y 4 alas. Dn. 07: 4-7" },
+                { q: "26. ¿Cuántos cuernos tenía el terrible y espantoso animal que Daniel vio en un sueño?", a: "10 cuernos. Dn. 07: 7" },
+                { q: "27. En la visión de los cuatro animales, el animal terrible y espantoso tenía 10 cuernos. Al subir el cuerno pequeño, ¿cuántos cuernos fueron arrancados?", a: "3 cuernos. Dn. 07: 8" },
+                { q: "28. En la visión de Daniel del carnero y el macho cabrío, al quebrarse el cuerno del macho cabrío, ¿cuántos cuernos nacieron?", a: "4 cuernos Dn. 08: 8" },
+                { q: "29. ¿Cuánto tiempo estuvo ayunando Daniel cuando recibió la visión en el Tigris que se informa en el capítulo 10?", a: "3 semanas Dn. 10: 02-03" },
+                { q: "30. ¿Por cuánto tiempo le informó el ángel a Daniel que el príncipe del reino de Persia lo resistió necesitando la ayuda de Miguel?", a: "21 días 10:13" }
+            ],
+            videos: {
+                1: [
+                    { title: "Resumen del Libro de Daniel", id: "sIAnXp0hS9E" },
+                    { title: "Contexto Histórico de Daniel", id: "5voI7L3fA4o" }
+                ],
+                2: [
+                    { title: "La Estatua de Nabucodonosor (Daniel 2)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                3: [
+                    { title: "El Horno de Fuego (Daniel 3)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                4: [
+                    { title: "El Árbol Cortado (Daniel 4)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                5: [
+                    { title: "La Escritura en la Pared (Daniel 5)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                6: [
+                    { title: "Daniel en el Foso de los Leones (Daniel 6)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                7: [
+                    { title: "Las Cuatro Bestias (Daniel 7)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                8: [
+                    { title: "El Carnero y el Macho Cabrío (Daniel 8)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                9: [
+                    { title: "La Profecía de las Setenta Semanas (Daniel 9)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                10: [
+                    { title: "La Visión Junto al Río (Daniel 10)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                11: [
+                    { title: "Reyes del Norte y del Sur (Daniel 11)", id: "dQw4w9WgXcQ" } // Placeholder
+                ],
+                12: [
+                    { title: "El Tiempo del Fin (Daniel 12)", id: "dQw4w9WgXcQ" } // Placeholder
+                ]
+            }
+        };
+
+        let userProgress = {};
+
+        const App = {
+            init() {
+                this.loadProgress();
+                this.router();
+                window.addEventListener('hashchange', () => this.router());
+            },
+
+            router() {
+                const route = window.location.hash.substring(1);
+                const [path, param] = route.split('/');
+                
+                if (path === 'chapter' && param) {
+                    this.renderChapterView(parseInt(param));
+                } else if (path === 'general-quiz') {
+                    this.renderGeneralQuizView();
+                }
+                else {
+                    this.renderDashboard();
+                }
+            },
+
+            loadProgress() {
+                const savedProgress = localStorage.getItem('danielStudyProgress');
+                if (savedProgress) {
+                    userProgress = JSON.parse(savedProgress);
+                } else {
+                    userProgress = {
+                        chapters: {},
+                        overallProgress: 0,
+                        generalQuiz: {}
+                    };
+                    for (let i = 1; i <= 12; i++) {
+                        userProgress.chapters[i] = {
+                            read: false,
+                            observation: {},
+                            quizScore: null,
+                            blanks: {}
+                        };
+                    }
+                    userProgress.generalQuiz = {}; // Initialize general quiz answers
+                }
+            },
+
+            saveProgress() {
+                this.updateOverallProgress();
+                localStorage.setItem('danielStudyProgress', JSON.stringify(userProgress));
+            },
+
+            updateOverallProgress() {
+                let completedTasks = 0;
+                const totalTasks = 12 * 3; // Read, Observation, Quiz for 12 chapters
+                for (let i = 1; i <= 12; i++) {
+                    if (userProgress.chapters[i]?.read) completedTasks++;
+                    if (userProgress.chapters[i]?.quizScore !== null) completedTasks++;
+                    const obsTotal = AppData.observationQA[i]?.length || 0;
+                    const obsCompleted = Object.values(userProgress.chapters[i]?.observation || {}).filter(Boolean).length;
+                    if (obsTotal > 0 && obsCompleted === obsTotal) completedTasks++;
+                }
+                userProgress.overallProgress = Math.round((completedTasks / totalTasks) * 100);
+            },
+
+            renderDashboard() {
+                let chapterCards = '';
+                for (let i = 1; i <= 12; i++) {
+                    const chapterData = userProgress.chapters[i] || {};
+                    let progress = 0;
+                    let completedCount = 0;
+                    if(chapterData.read) completedCount++;
+                    if(chapterData.quizScore !== null) completedCount++;
+                    
+                    const obsTotal = AppData.observationQA[i]?.length || 0;
+                    const obsCompleted = Object.values(chapterData.observation || {}).filter(Boolean).length;
+                    if(obsTotal > 0 && obsCompleted === obsTotal) completedCount++;
+                    
+                    progress = obsTotal > 0 ? Math.round((completedCount / 3) * 100) : (chapterData.read ? 100 : 0);
+
+                    chapterCards += `
+                        <a href="#chapter/${i}" class="card block rounded-lg p-6 shadow-sm">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-bold text-lg text-gray-700">Capítulo ${i}</h3>
+                                <span class="text-sm font-semibold ${progress === 100 ? 'text-green-600' : 'text-yellow-600'}">${progress}%</span>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1">Explora las historias y profecías.</p>
+                            <div class="progress-bar-bg w-full h-2 rounded-full mt-4">
+                                <div class="progress-bar-fill h-2 rounded-full" style="width: ${progress}%"></div>
+                            </div>
+                        </a>
+                    `;
+                }
+
+                const appContainer = document.getElementById('app');
+                appContainer.innerHTML = `
+                    <header class="text-center mb-12">
+                        <h1 class="font-cursive text-5xl md:text-6xl main-title">Estudio de Daniel CRR Youth</h1>
+                        <p class="text-lg text-gray-600 mt-2">Un viaje interactivo por el libro de Daniel</p>
+                    </header>
+                    <div class="mb-8">
+                         <h2 class="text-2xl font-bold text-gray-800 mb-2">Progreso General</h2>
+                         <div class="progress-bar-bg w-full h-4 rounded-full">
+                            <div class="progress-bar-fill h-4 rounded-full flex items-center justify-center text-white text-xs font-bold" style="width: ${userProgress.overallProgress}%">
+                                ${userProgress.overallProgress}%
+                            </div>
+                        </div>
+                    </div>
+                    <main>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6">Capítulos</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${chapterCards}
+                        </div>
+                        <div class="mt-12 text-center">
+                            <a href="#general-quiz" class="btn-primary py-3 px-8 rounded-lg text-lg">Cuestionario General</a>
+                        </div>
+                    </main>
+                    <footer class="text-center mt-12 text-gray-500 text-sm">
+                        <p>Creado con ❤️ para el estudio de la Palabra.</p>
+                    </footer>
+                `;
+            },
+
+            renderChapterView(chapterId) {
+                const appContainer = document.getElementById('app');
+                appContainer.innerHTML = `
+                    <div class="flex items-center mb-8">
+                        <a href="#" class="btn-secondary py-2 px-4 rounded-md mr-4">&larr; Volver</a>
+                        <h1 class="font-cursive text-4xl main-title">Capítulo ${chapterId}</h1>
+                    </div>
+                    <div id="chapter-content" class="bg-white rounded-lg shadow-md p-6 md:p-8">
+                        <div class="border-b border-gray-200 mb-6">
+                            <nav class="flex space-x-8 -mb-px" id="chapter-tabs">
+                                <button data-tab="lectura" class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Lectura</button>
+                                <button data-tab="observacion" class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Observación</button>
+                                <button data-tab="cuestionario" class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Cuestionario</button>
+                                <button data-tab="recursos" class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Recursos</button>
+                            </nav>
+                        </div>
+                        <div id="tab-content"></div>
+                    </div>
+                `;
+                this.setupChapterTabs(chapterId);
+                this.activateTab(chapterId, 'lectura');
+            },
+
+            renderGeneralQuizView() {
+                const appContainer = document.getElementById('app');
+                const quizData = AppData.generalQuiz;
+
+                let questionsHtml = quizData.map((q, index) => {
+                    const savedAnswer = userProgress.generalQuiz[index] || '';
+                    return `
+                        <div class="mb-6 pb-6 border-b border-gray-100 last:border-b-0">
+                            <p class="font-semibold text-gray-800 mb-2">${q.q}</p>
+                            <textarea class="w-full p-2 border border-gray-300 rounded-md" rows="3" placeholder="Escribe tu respuesta aquí..." data-question-index="${index}">${savedAnswer}</textarea>
+                            <div class="mt-2">
+                                <button class="toggle-general-answer-btn text-sm text-orange-600 hover:underline" data-target="general-answer-${index}">Mostrar respuesta</button>
+                                <p id="general-answer-${index}" class="hidden mt-2 p-3 bg-orange-50 rounded-md text-gray-700">${q.a}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                appContainer.innerHTML = `
+                    <div class="flex items-center mb-8">
+                        <a href="#" class="btn-secondary py-2 px-4 rounded-md mr-4">&larr; Volver</a>
+                        <h1 class="font-cursive text-4xl main-title">Cuestionario General</h1>
+                    </div>
+                    <div id="general-quiz-content" class="bg-white rounded-lg shadow-md p-6 md:p-8">
+                        <p class="mb-6 text-gray-700">Aquí puedes responder preguntas generales sobre el libro de Daniel. Escribe tu respuesta y luego compárala con la respuesta correcta.</p>
+                        ${questionsHtml}
+                    </div>
+                `;
+                this.attachGeneralQuizEventListeners();
+            },
+
+            setupChapterTabs(chapterId) {
+                const tabsContainer = document.getElementById('chapter-tabs');
+                tabsContainer.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') {
+                        const tabName = e.target.dataset.tab;
+                        this.activateTab(chapterId, tabName);
+                    }
+                });
+            },
+
+            activateTab(chapterId, tabName) {
+                const tabs = document.querySelectorAll('#chapter-tabs button');
+                tabs.forEach(tab => {
+                    tab.classList.remove('tab-active');
+                    if(tab.dataset.tab === tabName) {
+                        tab.classList.add('tab-active');
+                    }
+                });
+                this.renderTabContent(chapterId, tabName);
+            },
+
+            renderTabContent(chapterId, tabName) {
+                const contentContainer = document.getElementById('tab-content');
+                let content = '';
+                switch(tabName) {
+                    case 'lectura':
+                        content = this.getLecturaContent(chapterId);
+                        break;
+                    case 'observacion':
+                        content = this.getObservacionContent(chapterId);
+                        break;
+                    case 'cuestionario':
+                        content = this.getCuestionarioContent(chapterId);
+                        break;
+                    case 'recursos':
+                        content = this.getRecursosContent(chapterId);
+                        break;
+                }
+                contentContainer.innerHTML = content;
+                this.attachTabEventListeners(chapterId, tabName);
+            },
+
+            getLecturaContent(chapterId) {
+                const text = AppData.bibleText[chapterId] || `<p>El texto para el capítulo ${chapterId} estará disponible próximamente.</p>`;
+                const isRead = userProgress.chapters[chapterId]?.read;
+                return `
+                    <div class="font-serif text-lg leading-relaxed text-gray-800">${text}</div>
+                    <div class="mt-8 pt-6 border-t border-gray-200 text-right">
+                        <button id="mark-as-read-btn" class="btn-primary py-2 px-6 rounded-md ${isRead ? 'bg-green-600 hover:bg-green-700' : ''}">
+                            ${isRead ? '✓ Leído' : 'Marcar como leído'}
+                        </button>
+                    </div>
+                `;
+            },
+            
+            getObservacionContent(chapterId) {
+                const qa = AppData.observationQA[chapterId];
+                if (!qa || qa.length === 0) return '<p>No hay preguntas de observación para este capítulo.</p>';
+
+                return qa.map((item, index) => `
+                    <div class="mb-6 pb-6 border-b border-gray-100 last:border-b-0">
+                        <p class="font-semibold text-gray-800 mb-2">${index + 1}. ${item.q}</p>
+                        <textarea class="w-full p-2 border border-gray-300 rounded-md" rows="3" placeholder="Escribe tu respuesta aquí..."></textarea>
+                        <div class="mt-2">
+                            <button class="toggle-answer-btn text-sm text-orange-600 hover:underline" data-target="answer-${chapterId}-${index}">Mostrar respuesta</button>
+                            <p id="answer-${chapterId}-${index}" class="hidden mt-2 p-3 bg-orange-50 rounded-md text-gray-700">${item.a}</p>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            getCuestionarioContent(chapterId) {
+                const quiz = AppData.quizzes[chapterId];
+                if (!quiz || quiz.length === 0) return '<p>No hay cuestionario para este capítulo.</p>';
+                
+                if (userProgress.chapters[chapterId]?.quizScore !== null) {
+                    return `
+                        <div class="text-center">
+                            <h3 class="text-2xl font-bold text-gray-800">¡Ya completaste este cuestionario!</h3>
+                            <p class="text-5xl font-bold my-4 main-title">${userProgress.chapters[chapterId].quizScore}%</p>
+                            <button id="retake-quiz-btn" class="btn-secondary py-2 px-6 rounded-md">Volver a intentar</button>
+                        </div>
+                    `;
+                }
+
+                let questionsHtml = quiz.map((q, index) => `
+                    <div class="mb-6">
+                        <p class="font-semibold mb-3">${index + 1}. ${q.q}</p>
+                        <div class="space-y-2">
+                            ${q.o.map((option, optIndex) => `
+                                <div>
+                                    <label class="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
+                                        <input type="radio" name="q${index}" value="${optIndex}" class="mr-3">
+                                        <span>${option}</span>
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+                return `
+                    <form id="quiz-form">
+                        ${questionsHtml}
+                        <div class="text-right mt-8">
+                            <button type="submit" class="btn-primary py-2 px-8 rounded-md">Calificar</button>
+                        </div>
+                    </form>
+                `;
+            },
+
+            getRecursosContent(chapterId) {
+                const videos = AppData.videos[chapterId];
+                if (!videos || videos.length === 0) return '<p>No hay recursos adicionales para este capítulo.</p>';
+
+                return videos.map(video => `
+                    <div class="mb-8">
+                        <h4 class="font-bold text-xl mb-3">${video.title}</h4>
+                        <div class="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden shadow-md">
+                            <iframe src="https://www.youtube.com/embed/${video.id}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            attachTabEventListeners(chapterId, tabName) {
+                if (tabName === 'lectura') {
+                    document.getElementById('mark-as-read-btn')?.addEventListener('click', () => {
+                        userProgress.chapters[chapterId].read = true;
+                        this.saveProgress();
+                        this.activateTab(chapterId, 'lectura');
+                    });
+                    document.querySelectorAll('.fill-in-blank').forEach(input => {
+                        const savedAnswer = userProgress.chapters[chapterId].blanks[input.dataset.answer] || '';
+                        input.value = savedAnswer;
+                        if(savedAnswer.toLowerCase() === input.dataset.answer.toLowerCase()) {
+                            input.classList.add('correct');
+                        }
+                        
+                        input.addEventListener('input', (e) => {
+                            const userAnswer = e.target.value;
+                            const correctAnswer = e.target.dataset.answer;
+                            userProgress.chapters[chapterId].blanks[correctAnswer] = userAnswer;
+                            this.saveProgress();
+                            
+                            if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
+                                e.target.classList.add('correct');
+                                e.target.classList.remove('incorrect');
+                            } else {
+                                e.target.classList.add('incorrect');
+                                e.target.classList.remove('correct');
+                            }
+                        });
+                    });
+                }
+                if (tabName === 'observacion') {
+                    document.querySelectorAll('.toggle-answer-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const target = document.getElementById(btn.dataset.target);
+                            target.classList.toggle('hidden');
+                            btn.textContent = target.classList.contains('hidden') ? 'Mostrar respuesta' : 'Ocultar respuesta';
+                        });
+                    });
+                }
+                if (tabName === 'cuestionario') {
+                    document.getElementById('quiz-form')?.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        this.submitQuiz(chapterId);
+                    });
+                    document.getElementById('retake-quiz-btn')?.addEventListener('click', () => {
+                        userProgress.chapters[chapterId].quizScore = null;
+                        this.saveProgress();
+                        this.activateTab(chapterId, 'cuestionario');
+                    });
+                }
+            },
+
+            attachGeneralQuizEventListeners() {
+                document.querySelectorAll('.toggle-general-answer-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const target = document.getElementById(btn.dataset.target);
+                        target.classList.toggle('hidden');
+                        btn.textContent = target.classList.contains('hidden') ? 'Mostrar respuesta' : 'Ocultar respuesta';
+                    });
+                });
+                document.querySelectorAll('#general-quiz-content textarea').forEach(textarea => {
+                    textarea.addEventListener('input', (e) => {
+                        const index = e.target.dataset.questionIndex;
+                        userProgress.generalQuiz[index] = e.target.value;
+                        this.saveProgress();
+                    });
+                });
+            },
+            
+            submitQuiz(chapterId) {
+                const quizData = AppData.quizzes[chapterId];
+                const form = document.getElementById('quiz-form');
+                let score = 0;
+                quizData.forEach((q, index) => {
+                    const selected = form.elements[`q${index}`].value;
+                    if (selected && parseInt(selected) === q.a) {
+                        score++;
+                    }
+                });
+                const percentage = Math.round((score / quizData.length) * 100);
+                userProgress.chapters[chapterId].quizScore = percentage;
+                this.saveProgress();
+                this.activateTab(chapterId, 'cuestionario');
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init();
+        });
+    </script>
+
+</body>
+</html>
